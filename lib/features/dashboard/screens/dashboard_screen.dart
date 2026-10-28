@@ -6,6 +6,7 @@ import '../../jobs/services/driver_job_service.dart';
 import '../../jobs/widgets/incoming_job_dialog.dart';
 import '../../profile/models/driver_profile.dart';
 import '../../profile/screens/driver_profile_screen.dart';
+import '../../documents/screens/driver_document_upload_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -140,7 +141,112 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   // 2. Online / Offline Status Toggle Card
                   _buildStatusCard(driver),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 14),
+
+                  // 2.1 Compliance & Document Verification Banner
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (ctx) => const DriverDocumentUploadScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DriverColors.cardDark,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: DriverColors.primaryOrange
+                              .withValues(alpha: 0.35),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: DriverColors.primaryOrange
+                                  .withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.document_scanner_outlined,
+                              color: DriverColors.primaryOrange,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Fleet Documents',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 1.5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: DriverColors.primaryOrange
+                                            .withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        '1 Pending',
+                                        style: TextStyle(
+                                          color: DriverColors.primaryOrange,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'CDL, Vehicle Registration & Inspection',
+                                  style: TextStyle(
+                                    color: Color(0xFF94A3B8),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Colors.white54,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
 
                   // 3. Active Job in Progress (if any)
                   ValueListenableBuilder<TowJob?>(
@@ -340,49 +446,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
+          Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isOnline ? DriverColors.onlineGreen : DriverColors.offlineRed,
+              boxShadow: [
+                BoxShadow(
                   color: isOnline ? DriverColors.onlineGreen : DriverColors.offlineRed,
-                  boxShadow: [
-                    BoxShadow(
-                      color: isOnline ? DriverColors.onlineGreen : DriverColors.offlineRed,
-                      blurRadius: 8,
-                      spreadRadius: 1,
-                    ),
-                  ],
+                  blurRadius: 8,
+                  spreadRadius: 1,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isOnline ? 'YOU ARE ONLINE' : 'YOU ARE OFFLINE',
-                    style: TextStyle(
-                      color: isOnline ? DriverColors.onlineGreen : DriverColors.offlineRed,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  Text(
-                    isOnline ? 'Ready to receive roadside requests' : 'Tap to start accepting jobs',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isOnline ? 'YOU ARE ONLINE' : 'YOU ARE OFFLINE',
+                  style: TextStyle(
+                    color: isOnline ? DriverColors.onlineGreen : DriverColors.offlineRed,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  isOnline ? 'Ready to receive roadside requests' : 'Tap to start accepting jobs',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
           Switch(
             value: isOnline,
             onChanged: (val) => _jobService.toggleOnlineStatus(val),
@@ -490,16 +596,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.55),
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.55),
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 4),
+              Icon(icon, color: color, size: 16),
             ],
           ),
           const SizedBox(height: 10),

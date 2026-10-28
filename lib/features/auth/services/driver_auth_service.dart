@@ -66,11 +66,22 @@ class DriverAuthService {
     }
 
     String driverName = 'Driver Partner';
+    String driverPhone = '+1 (555) 782-9901';
     String driverEmail = cleanId.contains('@') ? cleanId : '$cleanId@roacstowing.com';
     String truckModel = '2024 Peterbilt 337 (Flatbed)';
     String licensePlate = 'TOW-PRO-88';
 
-    // 1. Try PostgreSQL Backend API verification
+    // 1. Check local device cache for previously registered driver data
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString(_prefKeyDriverEmail);
+    if (savedEmail != null && savedEmail.toLowerCase() == cleanId.toLowerCase()) {
+      driverName = prefs.getString(_prefKeyDriverName) ?? driverName;
+      driverPhone = prefs.getString(_prefKeyDriverPhone) ?? driverPhone;
+      truckModel = prefs.getString(_prefKeyTruckModel) ?? truckModel;
+      licensePlate = prefs.getString(_prefKeyPlate) ?? licensePlate;
+    }
+
+    // 2. Try PostgreSQL Backend API verification
     try {
       final uri = Uri.parse('${ApiConfig.profileEndpoint}?email=$driverEmail');
       final response = await http.get(uri).timeout(const Duration(seconds: 4));
@@ -81,6 +92,9 @@ class DriverAuthService {
           final data = body['data'];
           driverName = data['name'] ?? driverName;
           driverEmail = data['email'] ?? driverEmail;
+          driverPhone = data['phone'] ?? driverPhone;
+          truckModel = data['truck_model'] ?? truckModel;
+          licensePlate = data['license_plate'] ?? licensePlate;
           debugPrint('✅ Verified driver with PostgreSQL backend: $driverEmail');
         }
       }
@@ -88,7 +102,7 @@ class DriverAuthService {
       debugPrint('ℹ️ PostgreSQL backend offline or remote sync skipped: $e');
     }
 
-    // 2. Fallback for demo driver accounts
+    // 3. Fallback for demo driver accounts
     final isDemoAccount = cleanId == 'drv-7701' ||
         cleanId == 'marcus.vance@roacstowing.com' ||
         cleanId.contains('marcus') ||
@@ -98,6 +112,7 @@ class DriverAuthService {
     if (isDemoAccount) {
       driverName = 'Marcus Vance';
       driverEmail = 'marcus.vance@roacstowing.com';
+      driverPhone = '+1 (555) 782-9901';
       truckModel = '2024 Peterbilt 337 Flatbed Heavy';
     }
 
@@ -105,7 +120,7 @@ class DriverAuthService {
     DriverJobService().driverNotifier.value = DriverProfile(
       id: 'DRV-7701',
       name: driverName,
-      phone: '+1 (555) 782-9901',
+      phone: driverPhone,
       email: driverEmail,
       truckModel: truckModel,
       licensePlate: licensePlate,
@@ -117,10 +132,10 @@ class DriverAuthService {
     );
 
     if (rememberMe) {
-      final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefKeyLoggedIn, true);
       await prefs.setString(_prefKeyDriverEmail, driverEmail);
       await prefs.setString(_prefKeyDriverName, driverName);
+      await prefs.setString(_prefKeyDriverPhone, driverPhone);
       await prefs.setString(_prefKeyTruckModel, truckModel);
       await prefs.setString(_prefKeyPlate, licensePlate);
     }

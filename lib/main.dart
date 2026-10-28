@@ -4,6 +4,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/screens/driver_login_screen.dart';
 import 'features/auth/services/driver_auth_service.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
+import 'features/splash/screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,7 +39,9 @@ class TowingDriverApp extends StatelessWidget {
       home: ValueListenableBuilder<bool>(
         valueListenable: DriverAuthService().isLoggedInNotifier,
         builder: (context, isLoggedIn, _) {
-          return isLoggedIn ? const DashboardScreen() : const DriverLoginScreen();
+          return SplashScreen(
+            nextScreen: isLoggedIn ? const DashboardScreen() : const DriverLoginScreen(),
+          );
         },
       ),
     );
