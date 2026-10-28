@@ -25,6 +25,9 @@ class _IncomingJobDialogState extends State<IncomingJobDialog> {
         setState(() => _secondsLeft--);
       } else {
         _countdownTimer?.cancel();
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
         DriverJobService().declineJob();
       }
     });
@@ -41,7 +44,10 @@ class _IncomingJobDialogState extends State<IncomingJobDialog> {
     final progress = _secondsLeft / 30.0;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       decoration: BoxDecoration(
         color: DriverColors.cardDark,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -54,10 +60,12 @@ class _IncomingJobDialogState extends State<IncomingJobDialog> {
         ],
       ),
       child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // Header: Job type badge & Payout
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -233,6 +241,7 @@ class _IncomingJobDialogState extends State<IncomingJobDialog> {
                   flex: 1,
                   child: OutlinedButton(
                     onPressed: () {
+                      Navigator.of(context, rootNavigator: true).pop();
                       DriverJobService().declineJob();
                     },
                     style: OutlinedButton.styleFrom(
@@ -249,6 +258,7 @@ class _IncomingJobDialogState extends State<IncomingJobDialog> {
                   flex: 2,
                   child: ElevatedButton(
                     onPressed: () {
+                      Navigator.of(context, rootNavigator: true).pop();
                       DriverJobService().acceptJob(widget.job);
                     },
                     style: ElevatedButton.styleFrom(
@@ -273,6 +283,7 @@ class _IncomingJobDialogState extends State<IncomingJobDialog> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
