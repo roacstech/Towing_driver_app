@@ -53,18 +53,18 @@ class _DashboardScreenState extends State<DashboardScreen>
   int _selectedTabIndex = 0;
   int _currentLayerIndex = 0;
   bool _isOnline = true;
+  bool _isSheetExpanded = false;
 
-  // Center driver location (San Francisco coordinates matching reference map)
+  // Center driver location (San Francisco coordinates)
   final LatLng _driverLocation = const LatLng(37.7749, -122.4194);
 
-  // Available map tile styles (Light Carto Voyager, Standard OSM, Dark Carto)
+  // Free OpenStreetMap tile layers matching customer app (zero API keys / zero watermarks)
   final List<String> _tileLayers = [
-    'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
     'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
   ];
 
-  // 5 Nearby towing requests matching Image 2
+  // 5 Nearby towing requests positioned cleanly around the driver
   late final List<NearbyTowRequest> _nearbyRequests;
   late NearbyTowRequest _selectedRequest;
 
@@ -74,7 +74,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     _jobService.init();
 
     _nearbyRequests = [
-      // 1. Featured default card (Ford F-150, $160, 6 min)
+      // 1. Featured default card (Ford F-150, $160, 6 min) - Bottom Left
       NearbyTowRequest(
         id: 'REQ-101',
         vehicleName: 'Ford F-150',
@@ -83,7 +83,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         duration: '6 min',
         price: '\$160',
         imagePath: 'assets/images/ford-f150.png',
-        position: const LatLng(37.7712, -122.4248),
+        position: const LatLng(37.7720, -122.4220),
         pickupAddress: 'Mission St & 16th St, SF',
         dropAddress: 'City View Auto Repair, SOMA, SF',
       ),
@@ -96,7 +96,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         duration: '3 min',
         price: '\$140',
         imagePath: 'assets/images/bmw-x5.png',
-        position: const LatLng(37.7810, -122.4245),
+        position: const LatLng(37.7780, -122.4228),
         pickupAddress: 'Geary Blvd & Van Ness, SF',
         dropAddress: 'European Auto Care, Mission, SF',
       ),
@@ -109,7 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         duration: '6 min',
         price: '\$110',
         imagePath: 'assets/images/ford-f150.png',
-        position: const LatLng(37.7798, -122.4110),
+        position: const LatLng(37.7774, -122.4155),
         pickupAddress: 'Market St & 4th St, SF',
         dropAddress: 'Wheel Works, Potrero Hill, SF',
       ),
@@ -122,7 +122,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         duration: '4 min',
         price: '\$125',
         imagePath: 'assets/images/tesla-model-y.png',
-        position: const LatLng(37.7762, -122.4295),
+        position: const LatLng(37.7748, -122.4242),
         pickupAddress: 'Hayes St & Octavia Blvd, SF',
         dropAddress: 'Tesla Service Center, 11th St, SF',
       ),
@@ -135,7 +135,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         duration: '5 min',
         price: '\$90',
         imagePath: 'assets/images/bmw-x5.png',
-        position: const LatLng(37.7688, -122.4132),
+        position: const LatLng(37.7724, -122.4150),
         pickupAddress: '8th St & Brannan St, SF',
         dropAddress: 'Bayline Towing Yard, SOMA, SF',
       ),
@@ -214,8 +214,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF152238),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.check_circle, color: Color(0xFF10B981), size: 28),
             SizedBox(width: 10),
             Text('Dispatch Accepted', style: TextStyle(color: Colors.white, fontSize: 18)),
@@ -264,156 +264,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ],
       ),
-    );
-  }
-
-  void _showAllNearbyRequestsModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Nearby Towing Demands',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                  Text(
-                    '${_nearbyRequests.length} Available',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFFFF4800),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.55,
-                ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: _nearbyRequests.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 10),
-                  itemBuilder: (ctx, idx) {
-                    final req = _nearbyRequests[idx];
-                    final isSelected = req.id == _selectedRequest.id;
-
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedRequest = req;
-                        });
-                        Navigator.of(ctx).pop();
-                        _mapController.move(req.position, 15.0);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isSelected ? const Color(0xFFFFF5F0) : const Color(0xFFFAFAFC),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: isSelected ? const Color(0xFFFF4800) : Colors.grey.shade200,
-                            width: isSelected ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.asset(
-                                req.imagePath,
-                                width: 60,
-                                height: 42,
-                                fit: BoxFit.contain,
-                                errorBuilder: (c, e, s) => const Icon(
-                                  Icons.directions_car,
-                                  color: Colors.grey,
-                                  size: 32,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    req.vehicleName,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                  ),
-                                  Text(
-                                    '${req.serviceReason} • ${req.distance}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  req.price,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 16,
-                                    color: Color(0xFFFF3B30),
-                                  ),
-                                ),
-                                Text(
-                                  req.duration,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Color(0xFF94A3B8),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -772,16 +622,17 @@ class _DashboardScreenState extends State<DashboardScreen>
       drawer: _buildDrawer(),
       body: Stack(
         children: [
-          // 1. Full-Screen Interactive Map
+          // 1. Full-Screen Interactive OpenStreetMap
           _buildMapView(),
 
           // 2. Top Floating Navigation Header
           _buildTopHeader(),
 
           // 3. Right-hand Map Action Controls (Compass, Layers, Re-center)
+          // Dynamically shifts up when the bottom sheet is swiped up!
           _buildRightMapControls(),
 
-          // 4. Bottom Floating Dispatch Card + Bottom Navigation Bar
+          // 4. Bottom Floating Dispatch Sheet (Swipe-up expandable) + Bottom Nav Bar
           _buildBottomContainer(),
         ],
       ),
@@ -794,15 +645,19 @@ class _DashboardScreenState extends State<DashboardScreen>
       mapController: _mapController,
       options: MapOptions(
         initialCenter: _driverLocation,
-        initialZoom: 14.8,
+        initialZoom: 15.0,
         minZoom: 12.0,
-        maxZoom: 18.0,
+        maxZoom: 18.5,
+        interactionOptions: const InteractionOptions(
+          flags: InteractiveFlag.all,
+        ),
       ),
       children: [
-        // Carto/OSM Tile Layer
+        // OpenStreetMap Tile Layer (Free, no watermarks, matches customer app)
         TileLayer(
           urlTemplate: _tileLayers[_currentLayerIndex],
           userAgentPackageName: 'com.roacs.towing_driver',
+          maxZoom: 19,
         ),
 
         // Central Radar Pulses & Tow Truck Marker
@@ -835,13 +690,13 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
 
-            // 5 Surrounding Demand Request Markers
+            // 5 Surrounding Demand Request Markers (Cleanly positioned on screen)
             ..._nearbyRequests.map((req) {
               final isSelected = req.id == _selectedRequest.id;
               return Marker(
                 point: req.position,
-                width: 120,
-                height: 56,
+                width: 115,
+                height: 52,
                 child: GestureDetector(
                   onTap: () {
                     setState(() {
@@ -861,7 +716,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   // Central Tow Truck Vehicle Widget
   Widget _buildCenterTowTruckMarker() {
     return Transform.rotate(
-      angle: -0.45, // Angled slightly to the right matching Image 2
+      angle: -0.45, // Angled slightly to the right matching reference UI
       child: Container(
         width: 48,
         height: 82,
@@ -962,7 +817,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isSelected ? const Color(0xFFFF4800) : Colors.black.withValues(alpha: 0.08),
-          width: isSelected ? 2 : 1,
+          width: isSelected ? 2.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -977,16 +832,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           // Red-Orange pointer pin with white center
           Container(
-            width: 18,
-            height: 18,
+            width: 17,
+            height: 17,
             decoration: const BoxDecoration(
               color: Color(0xFFFF3B30),
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Container(
-                width: 6,
-                height: 6,
+                width: 5,
+                height: 5,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -1002,7 +857,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               Text(
                 req.price,
                 style: const TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF0F172A),
                 ),
@@ -1146,9 +1001,15 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // --- RIGHT-SIDE MAP FLOATING CONTROLS ---
   Widget _buildRightMapControls() {
-    return Positioned(
-      right: 18,
-      top: MediaQuery.of(context).size.height * 0.38,
+    final bottomOffset = _isSheetExpanded
+        ? (MediaQuery.of(context).size.height * 0.58 + 80)
+        : 265.0;
+
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOutCubic,
+      right: 16,
+      bottom: bottomOffset,
       child: Column(
         children: [
           // Compass / Navigation Button
@@ -1158,24 +1019,32 @@ class _DashboardScreenState extends State<DashboardScreen>
               _mapController.rotate(0);
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Layers Switcher Button
+          // Layers Switcher Button (Toggles between OpenStreetMap Styles)
           _buildMapCircleButton(
             icon: Icons.layers_outlined,
             onTap: () {
               setState(() {
                 _currentLayerIndex = (_currentLayerIndex + 1) % _tileLayers.length;
               });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_currentLayerIndex == 0
+                      ? 'Switched to Standard OpenStreetMap'
+                      : 'Switched to Humanitarian OpenStreetMap'),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // My Location Target Button
           _buildMapCircleButton(
             icon: Icons.my_location_rounded,
             onTap: () {
-              _mapController.move(_driverLocation, 14.8);
+              _mapController.move(_driverLocation, 15.0);
             },
           ),
         ],
@@ -1197,7 +1066,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
+              color: Colors.black.withValues(alpha: 0.14),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -1210,6 +1079,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // --- BOTTOM DISPATCH CARD & BOTTOM NAVIGATION BAR ---
   Widget _buildBottomContainer() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final expandedHeight = screenHeight * 0.58;
+    const collapsedHeight = 195.0;
+
     return Positioned(
       left: 0,
       right: 0,
@@ -1217,195 +1090,128 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // White Floating Dispatch Card
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, -6),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 10),
-                // Drag handle pill
-                Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
+          // Swipe-up Expandable Dispatch Card
+          GestureDetector(
+            onVerticalDragEnd: (details) {
+              if (details.primaryVelocity != null) {
+                if (details.primaryVelocity! < -150) {
+                  // Swiped UP -> expand
+                  setState(() {
+                    _isSheetExpanded = true;
+                  });
+                } else if (details.primaryVelocity! > 150) {
+                  // Swiped DOWN -> collapse
+                  setState(() {
+                    _isSheetExpanded = false;
+                  });
+                }
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeInOutCubic,
+              height: _isSheetExpanded ? expandedHeight : collapsedHeight,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: 18,
+                    offset: const Offset(0, -6),
                   ),
-                ),
-                const SizedBox(height: 12),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  // Drag handle pill (Tap toggles expansion)
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isSheetExpanded = !_isSheetExpanded;
+                      });
+                    },
+                    child: Container(
+                      width: 42,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
 
-                // Header Row (📍 5 towing requests nearby ... See All)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFFECE5),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.location_on,
-                          color: Color(0xFFFF4800),
-                          size: 16,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${_nearbyRequests.length} towing requests nearby',
-                        style: const TextStyle(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: _showAllNearbyRequestsModal,
-                        child: const Text(
-                          'See All',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
+                  // Header Row (📍 5 towing requests nearby ... See All / Collapse)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFFECE5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.location_on,
                             color: Color(0xFFFF4800),
+                            size: 16,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Selected Request Preview Card
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 18),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFAFAFC),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      // Car thumbnail image
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.asset(
-                          _selectedRequest.imagePath,
-                          width: 82,
-                          height: 54,
-                          fit: BoxFit.contain,
-                          errorBuilder: (c, e, s) => Container(
-                            width: 82,
-                            height: 54,
-                            color: Colors.grey.shade100,
-                            child: const Icon(Icons.directions_car, color: Colors.grey, size: 28),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${_nearbyRequests.length} towing requests nearby',
+                          style: const TextStyle(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E293B),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Title & Reason
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _selectedRequest.vehicleName,
-                              style: const TextStyle(
-                                fontSize: 15.5,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF1E293B),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _selectedRequest.serviceReason,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF64748B),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.location_on,
-                                  size: 13,
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _isSheetExpanded = !_isSheetExpanded;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Text(
+                                _isSheetExpanded ? 'Collapse' : 'See All',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
                                   color: Color(0xFFFF4800),
                                 ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  '${_selectedRequest.distance} • ${_selectedRequest.duration}',
-                                  style: const TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                              ),
+                              Icon(
+                                _isSheetExpanded
+                                    ? Icons.keyboard_arrow_down_rounded
+                                    : Icons.keyboard_arrow_up_rounded,
+                                color: const Color(0xFFFF4800),
+                                size: 18,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Price & Accept Button
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            _selectedRequest.price,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFFFF3B30),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          ElevatedButton(
-                            onPressed: () => _handleAcceptRequest(_selectedRequest),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF4800),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              minimumSize: Size.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: const Text(
-                              'Accept',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-              ],
+                  const SizedBox(height: 12),
+
+                  // Content: If collapsed -> Single Card Preview; If expanded -> Full scrollable list of all requests!
+                  Expanded(
+                    child: _isSheetExpanded
+                        ? _buildExpandedRequestsList()
+                        : Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _buildRequestTile(_selectedRequest, isSinglePreview: true),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -1433,6 +1239,151 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Expanded list showing all 5 requests
+  Widget _buildExpandedRequestsList() {
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+      itemCount: _nearbyRequests.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      itemBuilder: (ctx, idx) {
+        final req = _nearbyRequests[idx];
+        return _buildRequestTile(req, isSinglePreview: false);
+      },
+    );
+  }
+
+  // Request tile builder used both in collapsed single-view and expanded full-list
+  Widget _buildRequestTile(NearbyTowRequest req, {required bool isSinglePreview}) {
+    final isSelected = req.id == _selectedRequest.id;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedRequest = req;
+        });
+        _mapController.move(req.position, 15.0);
+      },
+      child: Container(
+        margin: isSinglePreview ? const EdgeInsets.symmetric(horizontal: 18) : EdgeInsets.zero,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFF9F6) : const Color(0xFFFAFAFC),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFF4800) : Colors.grey.shade200,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Car thumbnail image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                req.imagePath,
+                width: 80,
+                height: 52,
+                fit: BoxFit.contain,
+                errorBuilder: (c, e, s) => Container(
+                  width: 80,
+                  height: 52,
+                  color: Colors.grey.shade100,
+                  child: const Icon(Icons.directions_car, color: Colors.grey, size: 28),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Title & Reason
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    req.vehicleName,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E293B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    req.serviceReason,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 13,
+                        color: Color(0xFFFF4800),
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${req.distance} • ${req.duration}',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Price & Accept Button
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  req.price,
+                  style: const TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFFF3B30),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ElevatedButton(
+                  onPressed: () => _handleAcceptRequest(req),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF4800),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    minimumSize: Size.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Accept',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1688,7 +1639,7 @@ class RadarPulsePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
 
-    // 1. Concentric rings matching Image 2
+    // 1. Concentric rings matching reference UI
     final ringPaint = Paint()
       ..color = const Color(0xFFFF521B).withValues(alpha: 0.22)
       ..style = PaintingStyle.stroke
@@ -1727,12 +1678,12 @@ class RadarPulsePainter extends CustomPainter {
       canvas.drawPath(path, conePaint);
     }
 
-    // Sectors facing the request pins
-    drawDemandCone(-0.85, 0.55, 115); // Top-left pin direction
-    drawDemandCone(0.35, 0.55, 115);  // Top-right pin direction
-    drawDemandCone(2.35, 0.50, 115);  // Bottom-left pin direction
-    drawDemandCone(-2.55, 0.45, 115); // Mid-left pin direction
-    drawDemandCone(1.20, 0.40, 115);  // Bottom-right pin direction
+    // Sectors facing the 5 request pins precisely
+    drawDemandCone(-0.75, 0.50, 115); // Top-left pin direction (BMW 330i)
+    drawDemandCone(0.55, 0.50, 115);  // Top-right pin direction (Honda Civic)
+    drawDemandCone(-3.14, 0.45, 115); // Mid-left pin direction (Tesla Model Y)
+    drawDemandCone(-2.40, 0.50, 115); // Bottom-left pin direction (Ford F-150)
+    drawDemandCone(1.05, 0.45, 115);  // Bottom-right pin direction (Toyota RAV4)
 
     // 3. Dynamic expanding pulse wave
     final animatedRadius = 40 + (pulseProgress * 75);
