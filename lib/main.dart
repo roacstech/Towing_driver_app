@@ -36,6 +36,25 @@ class TowingDriverApp extends StatelessWidget {
       theme: AppTheme.lightTheme(context),
       darkTheme: AppTheme.darkTheme(context),
       themeMode: ThemeMode.dark, // Driver apps default to sleek, high-contrast dark mode
+      routes: {
+        '/dashboard': (_) => const DashboardScreen(),
+        '/login': (_) => const DriverLoginScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/dashboard') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const DashboardScreen(),
+          );
+        }
+        if (settings.name == '/login') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const DriverLoginScreen(),
+          );
+        }
+        return null;
+      },
       home: ValueListenableBuilder<bool>(
         valueListenable: DriverAuthService().isLoggedInNotifier,
         builder: (context, isLoggedIn, _) {

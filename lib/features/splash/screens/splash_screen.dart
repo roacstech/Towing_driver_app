@@ -201,11 +201,20 @@ class _SplashScreenState extends State<SplashScreen>
                   position: _slideAnimation,
                   child: ScaleTransition(
                     scale: _scaleAnimation,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                            ),
+                            child: IntrinsicHeight(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
                           // 1. Top Header Pill: 24/7 Verified Dispatch
                           Padding(
                             padding: const EdgeInsets.only(top: 18),
@@ -543,12 +552,17 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
       ),
     ),
-  );
+  ),
+],
+),
+),
+),
+);
 }
 }
