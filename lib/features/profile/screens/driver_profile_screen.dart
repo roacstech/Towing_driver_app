@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/driver_colors.dart';
+import '../../documents/screens/driver_document_upload_screen.dart';
 import '../../jobs/services/driver_job_service.dart';
 
 class DriverProfileScreen extends StatelessWidget {
@@ -144,6 +145,72 @@ class DriverProfileScreen extends StatelessWidget {
                   _buildComplianceRow('DOT Annual Vehicle Safety Inspection', true),
                   const SizedBox(height: 14),
                   _buildComplianceRow('Commercial Roadside Liability (\$1M)', true),
+                  const SizedBox(height: 16),
+                  const Divider(color: DriverColors.borderDark, height: 1),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const DriverDocumentUploadScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DriverColors.primaryOrange
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: DriverColors.primaryOrange
+                              .withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.cloud_upload_outlined,
+                            color: DriverColors.primaryOrange,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Manage & Upload Documents',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Upload CDL, Registration, COI, and DOT Inspection',
+                                  style: TextStyle(
+                                    color: Color(0xFF94A3B8),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: DriverColors.primaryOrange,
+                            size: 15,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
