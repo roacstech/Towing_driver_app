@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/screens/driver_login_screen.dart';
+import 'features/auth/services/driver_auth_service.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 
 void main() async {
@@ -16,6 +18,9 @@ void main() async {
     ),
   );
 
+  // Initialize auth state
+  await DriverAuthService().init();
+
   runApp(const TowingDriverApp());
 }
 
@@ -30,7 +35,12 @@ class TowingDriverApp extends StatelessWidget {
       theme: AppTheme.lightTheme(context),
       darkTheme: AppTheme.darkTheme(context),
       themeMode: ThemeMode.dark, // Driver apps default to sleek, high-contrast dark mode
-      home: const DashboardScreen(),
+      home: ValueListenableBuilder<bool>(
+        valueListenable: DriverAuthService().isLoggedInNotifier,
+        builder: (context, isLoggedIn, _) {
+          return isLoggedIn ? const DashboardScreen() : const DriverLoginScreen();
+        },
+      ),
     );
   }
 }

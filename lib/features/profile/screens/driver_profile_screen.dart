@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/driver_colors.dart';
+import '../../auth/screens/driver_login_screen.dart';
+import '../../auth/services/driver_auth_service.dart';
 import '../../jobs/services/driver_job_service.dart';
 
 class DriverProfileScreen extends StatelessWidget {
@@ -150,17 +152,39 @@ class DriverProfileScreen extends StatelessWidget {
             const SizedBox(height: 30),
 
             // 4. Logout / Back
+            ElevatedButton.icon(
+              onPressed: () async {
+                await DriverAuthService().logout();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (ctx) => const DriverLoginScreen()),
+                    (route) => false,
+                  );
+                }
+              },
+              icon: const Icon(Icons.logout_rounded, size: 18),
+              label: const Text('Sign Out Driver Account', style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: DriverColors.offlineRed.withValues(alpha: 0.15),
+                foregroundColor: DriverColors.offlineRed,
+                side: const BorderSide(color: DriverColors.offlineRed),
+                minimumSize: const Size.fromHeight(50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+            ),
+            const SizedBox(height: 12),
             OutlinedButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
               style: OutlinedButton.styleFrom(
-                foregroundColor: DriverColors.offlineRed,
-                side: const BorderSide(color: DriverColors.offlineRed),
-                minimumSize: const Size.fromHeight(50),
+                foregroundColor: Colors.white70,
+                side: const BorderSide(color: DriverColors.borderDark),
+                minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              child: const Text('Close Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Back to Dashboard'),
             ),
             const SizedBox(height: 20),
           ],
