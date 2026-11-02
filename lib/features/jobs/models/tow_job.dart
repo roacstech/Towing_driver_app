@@ -137,12 +137,17 @@ class TowJob {
   bool get isHighPay => estimatedPayout >= 150.0;
 
   List<String> get tags {
-    if (requestType.toLowerCase() == 'vehicle transport') {
-      return const ['Long Distance', 'SUV'];
+    final cat = vehicleCategory.split(' ').first;
+    if (requestType.toLowerCase().contains('transport') || requestType.toLowerCase().contains('distance')) {
+      return ['Long Distance', cat];
     } else if (isUrgent) {
-      return ['Urgent Priority', vehicleCategory.split(' ').first];
+      return ['Urgent Priority', cat];
+    } else if (serviceTitle.toLowerCase().contains('medium')) {
+      return ['Medium-Duty', cat];
+    } else if (serviceTitle.toLowerCase().contains('heavy')) {
+      return ['Heavy-Duty', cat];
     } else {
-      return ['Standard', vehicleCategory.split(' ').first];
+      return ['Standard', cat];
     }
   }
 
@@ -233,51 +238,136 @@ class TowJob {
       return JobStatus.pending;
     }
 
-    final reqType = json['request_type'] ?? json['requestType'] ?? 'Accident Recovery';
-    final payout = (json['estimated_payout'] as num?)?.toDouble() ?? 145.00;
-    final pLat = (json['pickup_lat'] as num?)?.toDouble() ?? 37.7649;
-    final pLng = (json['pickup_lng'] as num?)?.toDouble() ?? -122.4194;
+    double? parseCoord(dynamic val) {
+      if (val == null) return null;
+      return double.tryParse(val.toString());
+    }
+
+    // Dynamic Service Title & Request Type
+    final serviceTitle = (json['service_title'] ?? json['serviceTitle'] ?? 'Roadside Towing').toString();
+    final reqType = (json['request_type'] ?? json['requestType'] ?? serviceTitle).toString();
+
+    // Dynamic Vehicle Name, Make, Model, Year, Category & Image
+    final rawVehicleName = (json['vehicle_name'] ?? json['vehicleName'] ?? 'Customer Vehicle').toString();
+    
+    // Extract year if present at beginning of vehicle name (e.g. "2023 Honda Accord")
+    String parsedYear = (json['vehicle_year'] ?? json['year'])?.toString() ?? '';
+    String vehicleName = rawVehicleName;
+    final yearMatch = RegExp(r'^(\d{4})\s+(.+)$').firstMatch(rawVehicleName);
+    if (yearMatch != null) {
+      parsedYear = yearMatch.group(1)!;
+      vehicleName = yearMatch.group(2)!;
+    }
+    if (parsedYear.isEmpty) parsedYear = '2024';
+
+    // Dynamic vehicle make & model
+    String vehicleMake = (json['vehicle_make'] ?? json['make'])?.toString() ?? '';
+    String vehicleModel = (json['vehicle_model'] ?? json['model'])?.toString() ?? '';
+    if (vehicleMake.isEmpty) {
+      final parts = vehicleName.split(' ');
+      vehicleMake = parts.isNotEmpty ? parts.first : 'Vehicle';
+      vehicleModel = parts.length > 1 ? parts.sublist(1).join(' ') : 'Model';
+    }
+
+    // Dynamic category determination
+    String vehicleCategory = (json['vehicle_category'] ?? json['vehicle_type'])?.toString() ?? '';
+    if (vehicleCategory.isEmpty) {
+      final lowerName = rawVehicleName.toLowerCase();
+      if (lowerName.contains('tesla') || lowerName.contains('ev ') || lowerName.contains('electric')) {
+        vehicleCategory = 'Electric AWD';
+      } else if (lowerName.contains('suv') || lowerName.contains('x5') || lowerName.contains('fortuner') || lowerName.contains('creta')) {
+        vehicleCategory = 'Mid-Size SUV';
+      } else if (lowerName.contains('truck') || lowerName.contains('f-150') || lowerName.contains('pickup')) {
+        vehicleCategory = 'Full-Size Truck';
+      } else {
+        vehicleCategory = 'Sedan';
+      }
+    }
+
+    // Dynamic vehicle asset image mapping
+    String vehicleImage = (json['vehicle_image'] ?? json['asset_path'] ?? json['assetPath'])?.toString() ?? '';
+    if (!vehicleImage.startsWith('assets/vehicles/') && !vehicleImage.startsWith('assets/home/vehicles/')) {
+      final lowerName = rawVehicleName.toLowerCase();
+      if (lowerName.contains('tesla')) {
+        vehicleImage = 'assets/vehicles/tesla-model-y.png';
+      } else if (lowerName.contains('bmw') || lowerName.contains('fortuner') || lowerName.contains('suv')) {
+        vehicleImage = 'assets/vehicles/bmw-x5.png';
+      } else if (lowerName.contains('ford') || lowerName.contains('truck') || lowerName.contains('f-150')) {
+        vehicleImage = 'assets/vehicles/ford-f150.png';
+      } else if (lowerName.contains('audi')) {
+        vehicleImage = 'assets/vehicles/audi_test.png';
+      } else {
+        // High quality transparent sedan asset (Honda City, Accord, Toyota, Hyundai, etc.)
+        vehicleImage = 'assets/vehicles/hyundai_test.png';
+      }
+    }
+
+    // Dynamic Estimated Payout based on customer fare
+    final totalCostStr = (json['total_cost'] ?? json['totalCost'])?.toString() ?? '\$120.00';
+    double payout = (json['estimated_payout'] as num?)?.toDouble() ?? 0.0;
+    if (payout <= 0) {
+      final costNum = double.tryParse(totalCostStr.replaceAll(RegExp(r'[^0-9.]'), ''));
+      if (costNum != null && costNum > 0) {
+        // Driver earnings is ~85% of customer fare
+        payout = double.parse((costNum * 0.85).toStringAsFixed(2));
+      } else {
+        payout = 95.00;
+      }
+    }
+
+    // Dynamic Coordinates with Coimbatore fallback hub (11.1389, 77.0325)
+    final pLat = parseCoord(json['pickup_lat'] ?? json['pickupLat']) ?? 11.1389;
+    final pLng = parseCoord(json['pickup_lng'] ?? json['pickupLng']) ?? 77.0325;
+    final dLat = parseCoord(json['drop_lat'] ?? json['dropLat']) ?? (pLat + 0.015);
+    final dLng = parseCoord(json['drop_lng'] ?? json['dropLng']) ?? (pLng + 0.012);
+
+    final custLat = parseCoord(json['customer_lat'] ?? json['customerLat']) ?? pLat;
+    final custLng = parseCoord(json['customer_lng'] ?? json['customerLng']) ?? pLng;
+
+    final customerName = (json['customer_name'] ?? json['customerName'] ?? 'Customer').toString().trim();
+    final customerPhone = (json['customer_phone'] ?? json['customerPhone'] ?? '+1 (555) 019-2831').toString().trim();
+    final notes = (json['notes'] ?? json['special_notes'])?.toString() ?? 'Customer requested $serviceTitle. Proceed to pickup coordinates.';
 
     return TowJob(
-      id: json['id']?.toString() ?? 'TOW-${DateTime.now().millisecondsSinceEpoch % 10000}',
-      serviceTitle: json['serviceTitle'] ?? json['service_title'] ?? 'Emergency Flatbed Tow',
+      id: json['id']?.toString() ?? 'TW-${DateTime.now().millisecondsSinceEpoch % 100000}',
+      serviceTitle: serviceTitle,
       requestType: reqType,
-      vehicleName: json['vehicleName'] ?? json['vehicle_name'] ?? 'Tesla Model Y',
-      vehicleYear: json['vehicle_year'] ?? '2023',
-      vehicleMake: json['vehicle_make'] ?? 'Tesla',
-      vehicleModel: json['vehicle_model'] ?? 'Model Y',
-      vehicleCategory: json['vehicle_category'] ?? 'Electric AWD SUV',
-      licensePlate: json['licensePlate'] ?? json['license_plate'] ?? '7XTR921',
-      vehicleImage: json['vehicle_image'] ?? 'assets/vehicles/tesla-model-y.png',
-      pickupAddress: json['pickupAddress'] ?? json['pickup_address'] ?? 'Mission St & 16th St, San Francisco, CA',
-      dropAddress: json['dropAddress'] ?? json['drop_address'] ?? 'City View Auto Repair, SOMA, SF',
+      vehicleName: vehicleName,
+      vehicleYear: parsedYear,
+      vehicleMake: vehicleMake,
+      vehicleModel: vehicleModel,
+      vehicleCategory: vehicleCategory,
+      licensePlate: json['licensePlate'] ?? json['license_plate'] ?? '',
+      vehicleImage: vehicleImage,
+      pickupAddress: json['pickupAddress'] ?? json['pickup_address'] ?? 'Pickup Location',
+      dropAddress: json['dropAddress'] ?? json['drop_address'] ?? 'Drop Destination',
       pickupLat: pLat,
       pickupLng: pLng,
-      dropLat: (json['drop_lat'] as num?)?.toDouble() ?? 37.7785,
-      dropLng: (json['drop_lng'] as num?)?.toDouble() ?? -122.4056,
-      customerLat: (json['customer_lat'] as num?)?.toDouble() ?? pLat,
-      customerLng: (json['customer_lng'] as num?)?.toDouble() ?? pLng,
-      driverLat: (json['driver_lat'] as num?)?.toDouble(),
-      driverLng: (json['driver_lng'] as num?)?.toDouble(),
-      driverHeading: (json['driver_heading'] as num?)?.toDouble(),
-      distanceToPickup: json['distance_to_pickup'] ?? '1.8 mi',
-      pickupEta: json['pickup_eta'] ?? '6 min',
+      dropLat: dLat,
+      dropLng: dLng,
+      customerLat: custLat,
+      customerLng: custLng,
+      driverLat: parseCoord(json['driver_lat'] ?? json['driverLat']),
+      driverLng: parseCoord(json['driver_lng'] ?? json['driverLng']),
+      driverHeading: parseCoord(json['driver_heading'] ?? json['driverHeading']),
+      distanceToPickup: json['distance_to_pickup'] ?? (json['distance_miles'] != null ? '${json['distance_miles']} mi' : '1.8 mi'),
+      pickupEta: json['pickup_eta'] ?? (json['eta_or_duration'] ?? '6 min'),
       tripDuration: json['trip_duration'] ?? '24 min',
-      customerName: json['customer_name'] ?? json['driverName'] ?? 'Sarah Jenkins',
-      customerPhone: json['customer_phone'] ?? '+1 (555) 438-9922',
+      customerName: customerName.isNotEmpty ? customerName : 'Customer',
+      customerPhone: customerPhone.isNotEmpty ? customerPhone : '+1 (555) 019-2831',
       customerRating: (json['customer_rating'] as num?)?.toDouble() ?? 4.95,
-      totalCost: json['totalCost'] ?? json['total_cost'] ?? '\$145.00',
+      totalCost: totalCostStr,
       estimatedPayout: payout,
-      basePayout: (json['base_payout'] as num?)?.toDouble() ?? 75.00,
-      mileagePayout: (json['mileage_payout'] as num?)?.toDouble() ?? 40.00,
-      hazardFee: (json['hazard_fee'] as num?)?.toDouble() ?? 20.00,
-      specialEquipmentFee: (json['special_equipment_fee'] as num?)?.toDouble() ?? 10.00,
-      etaOrDuration: json['etaOrDuration'] ?? '6 min ETA (1.8 mi)',
+      basePayout: double.parse((payout * 0.6).toStringAsFixed(2)),
+      mileagePayout: double.parse((payout * 0.4).toStringAsFixed(2)),
+      hazardFee: (json['hazard_fee'] as num?)?.toDouble() ?? 0.00,
+      specialEquipmentFee: (json['special_equipment_fee'] as num?)?.toDouble() ?? 0.00,
+      etaOrDuration: json['etaOrDuration'] ?? json['eta_or_duration'] ?? '6 min ETA (1.8 mi)',
       status: parseStatus(json['status']),
       createdAt: json['created_at'] != null 
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
-      notes: json['notes'] ?? 'Vehicle has front axle lock. Flatbed required.',
+      notes: notes,
       isUrgent: json['is_urgent'] ?? false,
       urgencyReason: json['urgency_reason'] ?? 'Standard Priority',
       equipmentRequirements: (json['equipment_requirements'] as List?)?.map((e) => e.toString()).toList() ??

@@ -27,12 +27,25 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
         return ValueListenableBuilder<LatLng>(
           valueListenable: DriverJobService().driverLocationNotifier,
           builder: (context, liveDriverPos, _) {
-            final driverPos = (job.driverLat != null && job.driverLng != null)
+            final rawDriverPos = (job.driverLat != null && job.driverLng != null)
                 ? LatLng(job.driverLat!, job.driverLng!)
                 : liveDriverPos;
             final customerPos = LatLng(job.effectiveCustomerLat, job.effectiveCustomerLng);
             final pickupPos = LatLng(job.pickupLat, job.pickupLng);
-            final dropPos = LatLng(job.dropLat, job.dropLng);
+
+            // Proximity clamp: Ensure driver marker never renders thousands of miles away (e.g. US simulator vs India)
+            LatLng driverPos = rawDriverPos;
+            final distDriver = const Distance().as(LengthUnit.Mile, driverPos, customerPos);
+            if (distDriver > 150) {
+              driverPos = LatLng(customerPos.latitude - 0.008, customerPos.longitude - 0.006);
+            }
+
+            // Proximity clamp: Ensure drop destination is in realistic vicinity of pickup
+            LatLng dropPos = LatLng(job.dropLat, job.dropLng);
+            final distDrop = const Distance().as(LengthUnit.Mile, pickupPos, dropPos);
+            if (distDrop > 250) {
+              dropPos = LatLng(pickupPos.latitude + 0.015, pickupPos.longitude + 0.012);
+            }
 
             return Scaffold(
               backgroundColor: DriverColors.scaffoldBg,
@@ -43,7 +56,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                     mapController: _mapController,
                     options: MapOptions(
                       initialCenter: job.status == JobStatus.towing ? dropPos : customerPos,
-                      initialZoom: 13.8,
+                      initialZoom: 14.5,
                     ),
                     children: [
                       TileLayer(
@@ -240,7 +253,9 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                                     ),
                                   ),
                                   Text(
-                                    '${job.vehicleName} • ${job.licensePlate}',
+                                    (job.licensePlate.isNotEmpty && !job.vehicleName.contains(job.licensePlate))
+                                        ? '${job.vehicleName} • ${job.licensePlate}'
+                                        : job.vehicleName,
                                     style: const TextStyle(
                                       color: DriverColors.textSecondary,
                                       fontSize: 12,

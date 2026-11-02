@@ -55,8 +55,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _isOnline = true;
   bool _isSheetExpanded = false;
 
-  // Center driver location (San Francisco coordinates)
-  final LatLng _driverLocation = const LatLng(37.7749, -122.4194);
+  // Center driver location (Coimbatore hub coordinates)
+  final LatLng _driverLocation = const LatLng(11.1389, 77.0325);
 
   // Free OpenStreetMap tile layers matching customer app (zero API keys / zero watermarks)
   final List<String> _tileLayers = [
@@ -83,9 +83,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         duration: '6 min',
         price: '\$160',
         imagePath: 'assets/images/ford-f150.png',
-        position: const LatLng(37.7720, -122.4220),
-        pickupAddress: 'Mission St & 16th St, SF',
-        dropAddress: 'City View Auto Repair, SOMA, SF',
+        position: const LatLng(11.1320, 77.0280),
+        pickupAddress: 'Saravanampatti Main Rd, Coimbatore',
+        dropAddress: 'Apex Precision Auto, Trichy Road',
       ),
       // 2. Top Left Marker ($140, 3 min)
       NearbyTowRequest(
@@ -96,9 +96,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         duration: '3 min',
         price: '\$140',
         imagePath: 'assets/images/bmw-x5.png',
-        position: const LatLng(37.7780, -122.4228),
-        pickupAddress: 'Geary Blvd & Van Ness, SF',
-        dropAddress: 'European Auto Care, Mission, SF',
+        position: const LatLng(11.1440, 77.0260),
+        pickupAddress: 'Avinashi Rd, Peelamedu',
+        dropAddress: 'European Auto Care, Gandhipuram',
       ),
       // 3. Top Right Marker ($110, 6 min)
       NearbyTowRequest(
@@ -109,9 +109,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         duration: '6 min',
         price: '\$110',
         imagePath: 'assets/images/ford-f150.png',
-        position: const LatLng(37.7774, -122.4155),
-        pickupAddress: 'Market St & 4th St, SF',
-        dropAddress: 'Wheel Works, Potrero Hill, SF',
+        position: const LatLng(11.1430, 77.0390),
+        pickupAddress: 'Sathy Rd, Ganapathy',
+        dropAddress: 'Wheel Works, Gandhipuram',
       ),
       // 4. Mid Left Marker ($125, 4 min)
       NearbyTowRequest(
@@ -122,9 +122,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         duration: '4 min',
         price: '\$125',
         imagePath: 'assets/images/tesla-model-y.png',
-        position: const LatLng(37.7748, -122.4242),
-        pickupAddress: 'Hayes St & Octavia Blvd, SF',
-        dropAddress: 'Tesla Service Center, 11th St, SF',
+        position: const LatLng(11.1370, 77.0210),
+        pickupAddress: 'Kalapatti Rd, SITRA',
+        dropAddress: 'Tesla EV Hub, Avinashi Rd',
       ),
       // 5. Bottom Right Marker ($90, 5 min)
       NearbyTowRequest(
@@ -135,9 +135,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         duration: '5 min',
         price: '\$90',
         imagePath: 'assets/images/bmw-x5.png',
-        position: const LatLng(37.7724, -122.4150),
-        pickupAddress: '8th St & Brannan St, SF',
-        dropAddress: 'Bayline Towing Yard, SOMA, SF',
+        position: const LatLng(11.1310, 77.0380),
+        pickupAddress: 'Race Course Rd, Coimbatore',
+        dropAddress: 'Bayline Towing Yard, Trichy Rd',
       ),
     ];
 

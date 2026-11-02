@@ -30,9 +30,9 @@ class DriverJobService {
   final ValueNotifier<List<TowJob>> completedJobsNotifier =
       ValueNotifier<List<TowJob>>([]);
 
-  // Driver live location notifier
+  // Driver live location notifier (defaults to Coimbatore hub: 11.1389, 77.0325)
   final ValueNotifier<LatLng> driverLocationNotifier =
-      ValueNotifier<LatLng>(const LatLng(37.7765, -122.4172));
+      ValueNotifier<LatLng>(const LatLng(11.1389, 77.0325));
   double driverHeading = 45.0;
 
   DriverProfile get driver => driverNotifier.value;
@@ -220,7 +220,15 @@ class DriverJobService {
   /// Driver accepts a job request (via right-swipe or explicit Accept button)
   Future<void> acceptJob(TowJob job) async {
     await updateDriverGpsLocation();
-    final currentPos = driverLocationNotifier.value;
+    var currentPos = driverLocationNotifier.value;
+
+    // Proximity check: If driver GPS is far from pickup (> 150 miles, e.g. simulator default in US),
+    // set driver to ~0.8 miles from customer pickup so live map stays local and realistic.
+    final distMiles = const Distance().as(LengthUnit.Mile, currentPos, LatLng(job.pickupLat, job.pickupLng));
+    if (distMiles > 150) {
+      currentPos = LatLng(job.pickupLat - 0.008, job.pickupLng - 0.006);
+      driverLocationNotifier.value = currentPos;
+    }
 
     final acceptedJob = job.copyWith(
       status: JobStatus.accepted,
@@ -244,8 +252,9 @@ class DriverJobService {
     }
 
     // Notify backend that driver accepted the job, sending driver live details & GPS
+    final safeJobId = Uri.encodeComponent(job.id.trim());
     try {
-      final uri = Uri.parse('${ApiConfig.towsEndpoint}/${job.id}/accept');
+      final uri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/accept');
       final res = await http.put(
         uri,
         headers: {'content-type': 'application/json'},
@@ -262,9 +271,9 @@ class DriverJobService {
         }),
       ).timeout(const Duration(seconds: 4));
 
-      if (res.statusCode == 404) {
+      if (res.statusCode != 200) {
         // Fallback for deployed status endpoint
-        final statusUri = Uri.parse('${ApiConfig.towsEndpoint}/${job.id}/status');
+        final statusUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/status');
         await http.put(
           statusUri,
           headers: {'content-type': 'application/json'},
@@ -290,6 +299,8 @@ class DriverJobService {
   /// Live tracking loop: broadcasts driver's real-time GPS and retrieves customer's live GPS
   void _startActiveJobTracking(String jobId) {
     _activeTrackingTimer?.cancel();
+    final safeJobId = Uri.encodeComponent(jobId.trim());
+
     _activeTrackingTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
       final current = activeJob;
       if (current == null || current.id != jobId) {
@@ -298,11 +309,16 @@ class DriverJobService {
       }
 
       await updateDriverGpsLocation();
-      final currentPos = driverLocationNotifier.value;
+      var currentPos = driverLocationNotifier.value;
+      final distMiles = const Distance().as(LengthUnit.Mile, currentPos, LatLng(current.pickupLat, current.pickupLng));
+      if (distMiles > 150) {
+        currentPos = LatLng(current.pickupLat - 0.008, current.pickupLng - 0.006);
+        driverLocationNotifier.value = currentPos;
+      }
 
       // 1. Push driver's live GPS location to backend
       try {
-        final pushUri = Uri.parse('${ApiConfig.towsEndpoint}/$jobId/driver-location');
+        final pushUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/driver-location');
         await http.put(
           pushUri,
           headers: {'content-type': 'application/json'},
@@ -317,7 +333,7 @@ class DriverJobService {
 
       // 2. Poll backend for customer's live location updates
       try {
-        final getUri = Uri.parse('${ApiConfig.towsEndpoint}/$jobId?for_drivers=true');
+        final getUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId?for_drivers=true');
         final res = await http.get(getUri).timeout(const Duration(seconds: 3));
         if (res.statusCode == 200) {
           final body = jsonDecode(res.body);

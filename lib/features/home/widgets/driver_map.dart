@@ -90,7 +90,7 @@ class _DriverMapState extends State<DriverMap> {
       // Driver position placed ~1.5 miles from pickup
       return LatLng(job.pickupLat - 0.009, job.pickupLng - 0.007);
     }
-    return const LatLng(37.7845, -122.4020);
+    return const LatLng(11.1389, 77.0325);
   }
 
   @override
@@ -117,31 +117,31 @@ class _DriverMapState extends State<DriverMap> {
 
   List<LatLng> _getRoutePoints(TowJob job) {
     final driverLoc = _currentDriverLocation ?? _getDefaultDriverLocation();
-    final pickup = LatLng(job.pickupLat, job.pickupLng);
-    final drop = LatLng(job.dropLat, job.dropLng);
+    final pLat = job.pickupLat;
+    final pLng = job.pickupLng;
+    final pickup = LatLng(pLat, pLng);
 
-    // If it's the Silver Spring to Arlington job from reference design, generate a realistic curve
-    if (job.id == 'TOW-1001') {
-      return [
-        driverLoc,
-        pickup,
-        const LatLng(38.9610, -77.0360),
-        const LatLng(38.9320, -77.0540),
-        const LatLng(38.9050, -77.0700),
-        const LatLng(38.8980, -77.0950),
-        drop,
-      ];
+    // If driverLoc is far from pickup (> 150 miles), anchor driver locally
+    LatLng effectiveDriverLoc = driverLoc;
+    if (const Distance().as(LengthUnit.Mile, effectiveDriverLoc, pickup) > 150) {
+      effectiveDriverLoc = LatLng(pLat - 0.009, pLng - 0.007);
+    }
+
+    // If drop is far from pickup (> 250 miles), anchor drop locally
+    LatLng drop = LatLng(job.dropLat, job.dropLng);
+    if (const Distance().as(LengthUnit.Mile, pickup, drop) > 250) {
+      drop = LatLng(pLat + 0.015, pLng + 0.012);
     }
 
     // Default route points with slight curvature from driver to pickup and drop
-    final midPickupLat = (driverLoc.latitude + pickup.latitude) / 2 + 0.003;
-    final midPickupLng = (driverLoc.longitude + pickup.longitude) / 2 - 0.003;
+    final midPickupLat = (effectiveDriverLoc.latitude + pickup.latitude) / 2 + 0.003;
+    final midPickupLng = (effectiveDriverLoc.longitude + pickup.longitude) / 2 - 0.003;
 
     final midDropLat = (pickup.latitude + drop.latitude) / 2 + 0.004;
     final midDropLng = (pickup.longitude + drop.longitude) / 2 - 0.004;
 
     return [
-      driverLoc,
+      effectiveDriverLoc,
       LatLng(midPickupLat, midPickupLng),
       pickup,
       LatLng(midDropLat, midDropLng),

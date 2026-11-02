@@ -395,7 +395,9 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${job.vehicleYear} ${job.vehicleName}',
+                                job.vehicleName.startsWith(job.vehicleYear)
+                                    ? job.vehicleName
+                                    : '${job.vehicleYear} ${job.vehicleName}',
                                 style: const TextStyle(
                                   color: Color(0xFF64748B),
                                   fontSize: 12.5,

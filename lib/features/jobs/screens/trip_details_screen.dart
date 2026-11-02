@@ -29,7 +29,10 @@ class TripDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pickupPos = LatLng(job.pickupLat, job.pickupLng);
-    final dropPos = LatLng(job.dropLat, job.dropLng);
+    LatLng dropPos = LatLng(job.dropLat, job.dropLng);
+    if (const Distance().as(LengthUnit.Mile, pickupPos, dropPos) > 250) {
+      dropPos = LatLng(pickupPos.latitude + 0.015, pickupPos.longitude + 0.012);
+    }
 
     return Scaffold(
       backgroundColor: DriverColors.scaffoldBg,
