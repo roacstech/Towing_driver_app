@@ -15,12 +15,22 @@ class DriverJobService {
   final ValueNotifier<DriverProfile> driverNotifier =
       ValueNotifier<DriverProfile>(DriverProfile.mockDriver);
 
+  // Available list of requests for the card stack and 'See All' list
+  final ValueNotifier<List<TowJob>> availableRequestsNotifier =
+      ValueNotifier<List<TowJob>>(List<TowJob>.from(TowJob.sampleRequests));
+
+  // The currently focused/selected request card (syncs with the top map's route polyline)
+  final ValueNotifier<TowJob?> selectedRequestNotifier =
+      ValueNotifier<TowJob?>(TowJob.sampleRequests.first);
+
   final ValueNotifier<TowJob?> activeJobNotifier = ValueNotifier<TowJob?>(null);
   final ValueNotifier<TowJob?> pendingRequestNotifier = ValueNotifier<TowJob?>(null);
   final ValueNotifier<List<TowJob>> completedJobsNotifier =
       ValueNotifier<List<TowJob>>([]);
 
   DriverProfile get driver => driverNotifier.value;
+  List<TowJob> get availableRequests => availableRequestsNotifier.value;
+  TowJob? get selectedRequest => selectedRequestNotifier.value;
   TowJob? get activeJob => activeJobNotifier.value;
   TowJob? get pendingRequest => pendingRequestNotifier.value;
   List<TowJob> get completedJobs => completedJobsNotifier.value;
@@ -28,20 +38,34 @@ class DriverJobService {
   Timer? _pollingTimer;
 
   Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isOnline = prefs.getBool('driver_is_online') ?? true;
-    driverNotifier.value = driver.copyWith(isOnline: isOnline);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isOnline = prefs.getBool('driver_is_online') ?? true;
+      driverNotifier.value = driver.copyWith(isOnline: isOnline);
+    } catch (_) {}
 
     _loadSampleCompletedJobs();
 
-    if (isOnline) {
+    // Ensure selected request defaults to first available
+    if (availableRequests.isNotEmpty) {
+      selectedRequestNotifier.value = availableRequests.first;
+    }
+
+    if (driver.isOnline) {
       startDispatchPolling();
     }
   }
 
+  void selectRequest(TowJob job) {
+    selectedRequestNotifier.value = job;
+  }
+
   void toggleOnlineStatus(bool online) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('driver_is_online', online);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('driver_is_online', online);
+    } catch (_) {}
+
     driverNotifier.value = driver.copyWith(isOnline: online);
 
     if (online) {
@@ -54,14 +78,13 @@ class DriverJobService {
 
   void startDispatchPolling() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 12), (_) {
-      if (driver.isOnline && activeJob == null && pendingRequest == null) {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (driver.isOnline && activeJob == null) {
         checkBackendForPendingJobs();
       }
     });
 
-    // Also trigger initial check
-    if (activeJob == null && pendingRequest == null) {
+    if (activeJob == null) {
       Future.delayed(const Duration(seconds: 2), () {
         checkBackendForPendingJobs();
       });
@@ -73,7 +96,7 @@ class DriverJobService {
     _pollingTimer = null;
   }
 
-  /// Checks shared PostgreSQL backend for new tows created by Customer App
+  /// Checks shared PostgreSQL / REST backend for new tows created by Customer App
   Future<void> checkBackendForPendingJobs() async {
     try {
       final uri = Uri.parse(ApiConfig.towsEndpoint);
@@ -88,49 +111,43 @@ class DriverJobService {
               .where((t) => t.status == JobStatus.pending || t.status == JobStatus.accepted)
               .toList();
 
-          if (activeOrPending.isNotEmpty && activeJob == null && pendingRequest == null) {
-            final latest = activeOrPending.first;
-            pendingRequestNotifier.value = latest;
-            return;
+          if (activeOrPending.isNotEmpty) {
+            // Merge into available if not already present
+            final current = List<TowJob>.from(availableRequestsNotifier.value);
+            for (final incoming in activeOrPending) {
+              if (!current.any((e) => e.id == incoming.id)) {
+                current.insert(0, incoming);
+              }
+            }
+            availableRequestsNotifier.value = current;
+            if (selectedRequest == null && current.isNotEmpty) {
+              selectedRequestNotifier.value = current.first;
+            }
           }
         }
       }
     } catch (_) {
-      // Offline fallback: simulated request if empty
-    }
-
-    // If no remote job found and driver is online, simulate a nearby customer request for demo
-    if (pendingRequest == null && activeJob == null) {
-      _simulateDemoRequest();
+      // Backend is optional or offline; realistic mock requests remain active
     }
   }
 
-  void _simulateDemoRequest() {
-    pendingRequestNotifier.value = TowJob(
-      id: 'TOW-${DateTime.now().millisecondsSinceEpoch % 10000}',
-      serviceTitle: 'Emergency Flatbed Tow',
-      vehicleName: 'BMW 330i (Sedan)',
-      licensePlate: '7XTR921',
-      pickupAddress: 'Mission St & 16th St, San Francisco, CA',
-      dropAddress: 'City View Auto Repair, SOMA, SF',
-      pickupLat: 37.7649,
-      pickupLng: -122.4194,
-      dropLat: 37.7785,
-      dropLng: -122.4056,
-      customerName: 'Sarah Jenkins',
-      customerPhone: '+1 (555) 438-9922',
-      totalCost: '\$145.00',
-      etaOrDuration: '6 mins away (1.8 miles)',
-      status: JobStatus.pending,
-      createdAt: DateTime.now(),
-      notes: 'Transmission fluid leak, vehicle will not shift into gear.',
-    );
-  }
-
+  /// Driver accepts a job request (via right-swipe or explicit Accept button)
   Future<void> acceptJob(TowJob job) async {
     final acceptedJob = job.copyWith(status: JobStatus.accepted);
     activeJobNotifier.value = acceptedJob;
     pendingRequestNotifier.value = null;
+
+    // Remove from available requests
+    final updatedList = List<TowJob>.from(availableRequestsNotifier.value)
+      ..removeWhere((j) => j.id == job.id);
+    availableRequestsNotifier.value = updatedList;
+
+    // Update selected request to next available
+    if (updatedList.isNotEmpty) {
+      selectedRequestNotifier.value = updatedList.first;
+    } else {
+      selectedRequestNotifier.value = null;
+    }
 
     // Notify backend
     try {
@@ -143,8 +160,21 @@ class DriverJobService {
     } catch (_) {}
   }
 
-  void declineJob() {
-    pendingRequestNotifier.value = null;
+  /// Driver declines/rejects a job request (via left-swipe or explicit Decline button)
+  void declineJob(TowJob job) {
+    final updatedList = List<TowJob>.from(availableRequestsNotifier.value)
+      ..removeWhere((j) => j.id == job.id);
+    availableRequestsNotifier.value = updatedList;
+
+    if (selectedRequest?.id == job.id) {
+      selectedRequestNotifier.value = updatedList.isNotEmpty ? updatedList.first : null;
+    }
+  }
+
+  /// Reloads sample requests if the driver has cleared the queue
+  void resetDemoRequests() {
+    availableRequestsNotifier.value = List<TowJob>.from(TowJob.sampleRequests);
+    selectedRequestNotifier.value = TowJob.sampleRequests.first;
   }
 
   Future<void> advanceJobStage() async {
@@ -174,7 +204,6 @@ class DriverJobService {
       final updated = current.copyWith(status: nextStatus);
       activeJobNotifier.value = updated;
 
-      // Sync backend
       try {
         final uri = Uri.parse('${ApiConfig.towsEndpoint}/${current.id}/status');
         await http.put(
@@ -192,18 +221,14 @@ class DriverJobService {
     currentList.insert(0, completed);
     completedJobsNotifier.value = currentList;
 
-    // Parse cost and increment earnings
-    final cleanCostStr = job.totalCost.replaceAll(RegExp(r'[^0-9.]'), '');
-    final addedEarn = double.tryParse(cleanCostStr) ?? 120.0;
-    
+    final earned = job.estimatedPayout;
     driverNotifier.value = driver.copyWith(
-      todayEarnings: driver.todayEarnings + addedEarn,
+      todayEarnings: driver.todayEarnings + earned,
       totalTows: driver.totalTows + 1,
     );
 
     activeJobNotifier.value = null;
 
-    // Notify backend
     try {
       final uri = Uri.parse('${ApiConfig.towsEndpoint}/${job.id}/status');
       await http.put(
@@ -219,6 +244,7 @@ class DriverJobService {
       TowJob(
         id: 'TOW-6841',
         serviceTitle: 'Heavy Wheel-Lift Recovery',
+        requestType: 'Vehicle Transport',
         vehicleName: 'Ford F-150 SuperCrew',
         licensePlate: 'CAL-9942',
         pickupAddress: '420 Montgomery St, Financial District, SF',
@@ -230,6 +256,7 @@ class DriverJobService {
         customerName: 'David Miller',
         customerPhone: '+1 (555) 782-1200',
         totalCost: '\$160.00',
+        estimatedPayout: 160.00,
         etaOrDuration: 'Completed in 38m',
         status: JobStatus.completed,
         createdAt: DateTime.now().subtract(const Duration(hours: 3)),
@@ -238,6 +265,7 @@ class DriverJobService {
       TowJob(
         id: 'TOW-5912',
         serviceTitle: 'Standard Flatbed Tow',
+        requestType: 'Flat Tire',
         vehicleName: 'Honda Civic Sport',
         licensePlate: '6VBN481',
         pickupAddress: 'Sunset Blvd & 22nd Ave, SF',
@@ -249,6 +277,7 @@ class DriverJobService {
         customerName: 'Elena Rostova',
         customerPhone: '+1 (555) 349-8811',
         totalCost: '\$110.00',
+        estimatedPayout: 110.00,
         etaOrDuration: 'Completed in 25m',
         status: JobStatus.completed,
         createdAt: DateTime.now().subtract(const Duration(hours: 6)),

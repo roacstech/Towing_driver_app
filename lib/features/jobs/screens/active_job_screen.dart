@@ -24,15 +24,15 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
       builder: (context, activeJob, _) {
         final job = activeJob ?? widget.job;
 
-        final driverPos = const LatLng(37.7700, -122.4200);
+        final driverPos = const LatLng(37.7765, -122.4172);
         final pickupPos = LatLng(job.pickupLat, job.pickupLng);
         final dropPos = LatLng(job.dropLat, job.dropLng);
 
         return Scaffold(
-          backgroundColor: DriverColors.bgDark,
+          backgroundColor: DriverColors.scaffoldBg,
           body: Stack(
             children: [
-              // 1. Live Flutter Map
+              // 1. Live Interactive Flutter Map
               FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
@@ -46,12 +46,21 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   ),
                   PolylineLayer(
                     polylines: [
+                      // Glow
                       Polyline(
                         points: job.status == JobStatus.towing
                             ? [pickupPos, dropPos]
                             : [driverPos, pickupPos],
-                        strokeWidth: 5.0,
-                        color: DriverColors.primaryOrange,
+                        strokeWidth: 8.0,
+                        color: DriverColors.electricBlue.withValues(alpha: 0.3),
+                      ),
+                      // Main line
+                      Polyline(
+                        points: job.status == JobStatus.towing
+                            ? [pickupPos, dropPos]
+                            : [driverPos, pickupPos],
+                        strokeWidth: 4.5,
+                        color: DriverColors.electricBlue,
                       ),
                     ],
                   ),
@@ -64,17 +73,12 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                         height: 44,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.black,
+                            color: DriverColors.navy900,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.4),
-                                blurRadius: 8,
-                              ),
-                            ],
+                            boxShadow: DriverColors.cardShadow,
                           ),
-                          child: const Icon(Icons.fire_truck_rounded, color: DriverColors.primaryOrange, size: 24),
+                          child: const Icon(Icons.fire_truck_rounded, color: Colors.white, size: 22),
                         ),
                       ),
                       // Pickup Marker
@@ -83,11 +87,13 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                         width: 40,
                         height: 40,
                         child: Container(
-                          decoration: const BoxDecoration(
-                            color: DriverColors.enRouteAmber,
+                          decoration: BoxDecoration(
+                            color: DriverColors.electricBlue,
                             shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: DriverColors.cardShadow,
                           ),
-                          child: const Icon(Icons.car_crash_rounded, color: Colors.white, size: 22),
+                          child: const Icon(Icons.car_crash_rounded, color: Colors.white, size: 20),
                         ),
                       ),
                       // Dropoff Marker
@@ -96,11 +102,13 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                         width: 40,
                         height: 40,
                         child: Container(
-                          decoration: const BoxDecoration(
-                            color: DriverColors.onlineGreen,
+                          decoration: BoxDecoration(
+                            color: DriverColors.emeraldGreen,
                             shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: DriverColors.cardShadow,
                           ),
-                          child: const Icon(Icons.flag_rounded, color: Colors.white, size: 22),
+                          child: const Icon(Icons.flag_rounded, color: Colors.white, size: 20),
                         ),
                       ),
                     ],
@@ -108,28 +116,24 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                 ],
               ),
 
-              // 2. Top Navigation Bar with Status Banner
+              // 2. Top Floating Navigation Bar with Status
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: DriverColors.cardDark.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                        ),
-                      ],
+                      color: Colors.white.withValues(alpha: 0.96),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: DriverColors.surfaceBorder),
+                      boxShadow: DriverColors.floatingControlShadow,
                     ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: job.status.color.withValues(alpha: 0.2),
+                            color: job.status.color.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
@@ -160,16 +164,16 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: DriverColors.textNavy,
                                   fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.my_location, color: Colors.white70),
+                          icon: const Icon(Icons.my_location_rounded, color: DriverColors.electricBlue),
                           onPressed: () {
                             _mapController.move(
                               job.status == JobStatus.towing ? dropPos : pickupPos,
@@ -183,23 +187,17 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                 ),
               ),
 
-              // 3. Bottom Execution Panel
+              // 3. Bottom Execution Sheet
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
                 child: Container(
                   padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: DriverColors.cardDark,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        blurRadius: 20,
-                        offset: const Offset(0, -6),
-                      ),
-                    ],
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                    boxShadow: DriverColors.bottomSheetShadow,
                   ),
                   child: SafeArea(
                     top: false,
@@ -207,16 +205,16 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Customer & Call Row
+                        // Customer & Contact Row
                         Row(
                           children: [
                             CircleAvatar(
                               radius: 22,
-                              backgroundColor: DriverColors.primaryOrange.withValues(alpha: 0.2),
+                              backgroundColor: DriverColors.blueTint,
                               child: Text(
                                 job.customerName.isNotEmpty ? job.customerName[0] : 'C',
                                 style: const TextStyle(
-                                  color: DriverColors.primaryOrange,
+                                  color: DriverColors.electricBlue,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18,
                                 ),
@@ -230,15 +228,15 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                                   Text(
                                     job.customerName,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: DriverColors.textNavy,
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                   Text(
                                     '${job.vehicleName} • ${job.licensePlate}',
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(alpha: 0.7),
+                                    style: const TextStyle(
+                                      color: DriverColors.textSecondary,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -247,12 +245,12 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                             ),
                             Container(
                               decoration: BoxDecoration(
-                                color: DriverColors.bgDark,
+                                color: DriverColors.greenTint,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: DriverColors.borderDark),
+                                border: Border.all(color: DriverColors.greenBorder),
                               ),
                               child: IconButton(
-                                icon: const Icon(Icons.phone, color: DriverColors.onlineGreen),
+                                icon: const Icon(Icons.phone, color: DriverColors.emeraldDark),
                                 onPressed: () {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text('Calling customer: ${job.customerPhone}')),
@@ -263,12 +261,12 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                             const SizedBox(width: 8),
                             Container(
                               decoration: BoxDecoration(
-                                color: DriverColors.bgDark,
+                                color: DriverColors.blueTint,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: DriverColors.borderDark),
+                                border: Border.all(color: DriverColors.blueBorder),
                               ),
                               child: IconButton(
-                                icon: const Icon(Icons.message, color: DriverColors.navBlue),
+                                icon: const Icon(Icons.message, color: DriverColors.electricBlue),
                                 onPressed: () {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(content: Text('Opening live chat with customer')),
@@ -284,19 +282,19 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: DriverColors.bgDark,
+                            color: DriverColors.surfaceSubtle,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: DriverColors.borderDark),
+                            border: Border.all(color: DriverColors.surfaceBorderLight),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.info_outline, color: DriverColors.enRouteAmber, size: 18),
+                              const Icon(Icons.info_outline, color: DriverColors.warningAmber, size: 18),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   job.notes,
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.8),
+                                  style: const TextStyle(
+                                    color: DriverColors.textSecondary,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -307,28 +305,30 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                         const SizedBox(height: 16),
 
                         // Main Step Progression Action Button
-                        ElevatedButton(
-                          onPressed: () async {
-                            final previousStatus = job.status;
-                            await DriverJobService().advanceJobStage();
+                        SizedBox(
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              final previousStatus = job.status;
+                              await DriverJobService().advanceJobStage();
 
-                            if (previousStatus == JobStatus.towing && context.mounted) {
-                              _showCompletionDialog(context, job);
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _getActionColorForStatus(job.status),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
-                          child: Text(
-                            _getActionButtonText(job.status),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
+                              if (previousStatus == JobStatus.towing && context.mounted) {
+                                _showCompletionDialog(context, job);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _getActionColorForStatus(job.status),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                            child: Text(
+                              _getActionButtonText(job.status),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.3,
+                              ),
                             ),
                           ),
                         ),
@@ -352,7 +352,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
       case JobStatus.arrived:
         return Icons.location_on;
       case JobStatus.towing:
-        return Icons.local_shipping_rounded;
+        return Icons.fire_truck_rounded;
       case JobStatus.completed:
         return Icons.check_circle_rounded;
       case JobStatus.cancelled:
@@ -364,13 +364,15 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     switch (status) {
       case JobStatus.pending:
       case JobStatus.accepted:
-        return DriverColors.navBlue;
+        return DriverColors.electricBlue;
       case JobStatus.arrived:
-        return DriverColors.primaryOrange;
+        return DriverColors.navy900;
       case JobStatus.towing:
-        return DriverColors.onlineGreen;
-      default:
-        return DriverColors.primaryOrange;
+        return DriverColors.emeraldGreen;
+      case JobStatus.completed:
+        return DriverColors.emeraldGreen;
+      case JobStatus.cancelled:
+        return DriverColors.alertRed;
     }
   }
 
@@ -378,13 +380,15 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     switch (status) {
       case JobStatus.pending:
       case JobStatus.accepted:
-        return 'ARRIVED AT PICKUP LOCATION';
+        return 'Slide When Arrived at Scene';
       case JobStatus.arrived:
-        return 'HOOK VEHICLE & START TOW';
+        return 'Confirm Hooked & Begin Tow';
       case JobStatus.towing:
-        return 'COMPLETE TOW & UNLOAD';
-      default:
-        return 'JOB COMPLETED';
+        return 'Complete Drop-Off & Collect ${widget.job.payoutFormatted}';
+      case JobStatus.completed:
+        return 'Job Completed Successfully';
+      case JobStatus.cancelled:
+        return 'Job Was Cancelled';
     }
   }
 
@@ -393,75 +397,50 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: DriverColors.cardDark,
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: const BoxDecoration(
-                color: Color(0x2210B981),
+                color: DriverColors.greenTint,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle, color: DriverColors.onlineGreen, size: 54),
+              child: const Icon(Icons.check_circle, color: DriverColors.emeraldDark, size: 54),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             const Text(
-              'Tow Completed!',
+              'Trip Finished!',
               style: TextStyle(
-                color: Colors.white,
+                color: DriverColors.textNavy,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Vehicle delivered to ${job.dropAddress}.',
+              'You earned ${job.payoutFormatted} for this roadside recovery.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: DriverColors.textSecondary, fontSize: 14),
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: DriverColors.bgDark,
-                borderRadius: BorderRadius.circular(14),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop(); // dismiss dialog
+                  Navigator.of(context).pop(); // back to driver home
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DriverColors.emeraldGreen,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const Text('Back to Dispatch Queue', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Driver Payout',
-                    style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
-                  ),
-                  Text(
-                    job.totalCost,
-                    style: const TextStyle(
-                      color: DriverColors.onlineGreen,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: DriverColors.primaryOrange,
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: const Text('BACK TO DASHBOARD', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),

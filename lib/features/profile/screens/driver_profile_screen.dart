@@ -7,243 +7,364 @@ class DriverProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final driver = DriverJobService().driver;
+    final jobService = DriverJobService();
 
     return Scaffold(
-      backgroundColor: DriverColors.bgDark,
+      backgroundColor: DriverColors.scaffoldBg,
       appBar: AppBar(
-        backgroundColor: DriverColors.bgDark,
+        backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                color: DriverColors.textNavy,
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: const Text(
           'Driver Profile & Fleet Info',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: DriverColors.textNavy,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Column(
-          children: [
-            // 1. Driver Avatar & Rating
-            Center(
-              child: Column(
-                children: [
-                  Stack(
-                    alignment: Alignment.bottomRight,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        physics: const BouncingScrollPhysics(),
+        child: ValueListenableBuilder(
+          valueListenable: jobService.driverNotifier,
+          builder: (context, driver, _) {
+            return Column(
+              children: [
+                // 1. Driver Header Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: DriverColors.surfaceBorder),
+                    boxShadow: DriverColors.cardShadow,
+                  ),
+                  child: Column(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: DriverColors.primaryOrange, width: 3),
-                        ),
-                        child: const CircleAvatar(
-                          radius: 46,
-                          backgroundColor: DriverColors.cardDark,
-                          child: Icon(Icons.person, color: Colors.white, size: 50),
+                      Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: DriverColors.electricBlue, width: 2.5),
+                            ),
+                            child: const CircleAvatar(
+                              radius: 42,
+                              backgroundColor: DriverColors.surfaceSubtle,
+                              child: Icon(
+                                Icons.person_rounded,
+                                color: DriverColors.textNavy,
+                                size: 48,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: const BoxDecoration(
+                              color: DriverColors.emeraldGreen,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.verified_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        driver.name,
+                        style: const TextStyle(
+                          color: DriverColors.textNavy,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: DriverColors.onlineGreen,
-                          shape: BoxShape.circle,
+                      const SizedBox(height: 2),
+                      Text(
+                        driver.email,
+                        style: const TextStyle(
+                          color: DriverColors.textSecondary,
+                          fontSize: 13,
                         ),
-                        child: const Icon(Icons.check, color: Colors.white, size: 14),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: DriverColors.amberTint,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: DriverColors.amberBorder),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${driver.rating.toStringAsFixed(2)} Driver Rating · Gold Tier',
+                              style: const TextStyle(
+                                color: Color(0xFFB45309),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    driver.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 2. Active Fleet Vehicle Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: DriverColors.surfaceBorder),
+                    boxShadow: DriverColors.cardShadow,
                   ),
-                  Text(
-                    driver.email,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${driver.rating.toStringAsFixed(2)} Driver Score',
-                          style: const TextStyle(
-                            color: Colors.amber,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'ASSIGNED TOW TRUCK',
+                            style: TextStyle(
+                              color: DriverColors.textMuted,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                            ),
                           ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: DriverColors.greenTint,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'VERIFIED FLEET',
+                              style: TextStyle(
+                                color: DriverColors.emeraldDark,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        driver.truckModel,
+                        style: const TextStyle(
+                          color: DriverColors.textNavy,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Commercial Plate: ${driver.licensePlate}',
+                        style: const TextStyle(
+                          color: DriverColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      const Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _SpecBadge('21ft Chevron Bed'),
+                          _SpecBadge('10,000 lbs Winch'),
+                          _SpecBadge('Wheel-Lift Ready'),
+                          _SpecBadge('GoJak System Onboard'),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
+                ),
 
-            // 2. Tow Truck Details Card
-            _buildSectionHeader('ASSIGNED TOW TRUCK'),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: DriverColors.cardDark,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: DriverColors.borderDark),
-              ),
-              child: Column(
-                children: [
-                  _buildDetailRow(Icons.fire_truck, 'Vehicle Model', driver.truckModel),
-                  const Divider(color: DriverColors.borderDark, height: 24),
-                  _buildDetailRow(Icons.badge, 'License Plate', driver.licensePlate),
-                  const Divider(color: DriverColors.borderDark, height: 24),
-                  _buildDetailRow(Icons.fitness_center, 'Max Tow Capacity', '12,000 lbs (Class 6)'),
-                  const Divider(color: DriverColors.borderDark, height: 24),
-                  _buildDetailRow(Icons.settings, 'Winch System', '10,000 lb Ramsey Hydraulic'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-            // 3. Verification & Compliance
-            _buildSectionHeader('CERTIFICATIONS & COMPLIANCE'),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: DriverColors.cardDark,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: DriverColors.borderDark),
-              ),
-              child: Column(
-                children: [
-                  _buildComplianceRow('Commercial Driver License (CDL Class A)', true),
-                  const SizedBox(height: 14),
-                  _buildComplianceRow('Tow Operator Roadside Safety Certified', true),
-                  const SizedBox(height: 14),
-                  _buildComplianceRow('DOT Annual Vehicle Safety Inspection', true),
-                  const SizedBox(height: 14),
-                  _buildComplianceRow('Commercial Roadside Liability (\$1M)', true),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
+                // 3. Status Switch Tile
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: DriverColors.surfaceBorder),
+                    boxShadow: DriverColors.cardShadow,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: driver.isOnline ? DriverColors.emeraldGreen : DriverColors.textMuted,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                driver.isOnline ? 'Active on Dispatch Network' : 'Offline / Off-Duty',
+                                style: const TextStyle(
+                                  color: DriverColors.textNavy,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                driver.isOnline ? 'Receiving priority job offers' : 'Not receiving new requests',
+                                style: const TextStyle(
+                                  color: DriverColors.textSecondary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Switch.adaptive(
+                        value: driver.isOnline,
+                        activeColor: DriverColors.emeraldGreen,
+                        onChanged: (val) {
+                          jobService.toggleOnlineStatus(val);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
 
-            // 4. Logout / Back
-            OutlinedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: DriverColors.offlineRed,
-                side: const BorderSide(color: DriverColors.offlineRed),
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: const Text('Close Profile', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(height: 20),
-          ],
+                const SizedBox(height: 16),
+
+                // 4. Driver Documentation & Compliance
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: DriverColors.surfaceBorder),
+                    boxShadow: DriverColors.cardShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Credentials & Safety Records',
+                        style: TextStyle(
+                          color: DriverColors.textNavy,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _buildDocItem('Commercial Driver License (CDL-A)', 'Verified · Exp. 2028', Icons.badge_outlined),
+                      _buildDocItem('DOT Medical Certificate', 'Compliant · Exp. May 2027', Icons.medical_services_outlined),
+                      _buildDocItem('Towing & Recovery Association Card', 'Level 2 Certified Master', Icons.card_membership_outlined),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Align(
-      alignment: Alignment.centerLeft,
+  Widget _buildDocItem(String title, String subtitle, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: DriverColors.surfaceSubtle,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: DriverColors.textNavy, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: DriverColors.textNavy,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: DriverColors.emeraldDark,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.check_circle_rounded, color: DriverColors.emeraldGreen, size: 18),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpecBadge extends StatelessWidget {
+  final String label;
+
+  const _SpecBadge(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: DriverColors.surfaceSubtle,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DriverColors.surfaceBorderLight),
+      ),
       child: Text(
-        title,
-        style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.6),
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.8,
+        label,
+        style: const TextStyle(
+          color: DriverColors.textSecondary,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
         ),
       ),
-    );
-  }
-
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, color: DriverColors.primaryOrange, size: 20),
-        const SizedBox(width: 12),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
-            fontSize: 13,
-          ),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildComplianceRow(String label, bool isVerified) {
-    return Row(
-      children: [
-        Icon(
-          isVerified ? Icons.check_circle_rounded : Icons.pending,
-          color: isVerified ? DriverColors.onlineGreen : Colors.amber,
-          size: 20,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: isVerified ? const Color(0x2210B981) : const Color(0x22F59E0B),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            isVerified ? 'VERIFIED' : 'PENDING',
-            style: TextStyle(
-              color: isVerified ? DriverColors.onlineGreen : Colors.amber,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

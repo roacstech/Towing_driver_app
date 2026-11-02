@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
-import 'features/dashboard/screens/dashboard_screen.dart';
+import 'features/navigation/screens/driver_main_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Dark navigation bar and status bar style
+  // Premium Light Theme system bars: crisp white navigation and dark status icons
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF0B1320),
-      systemNavigationBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
 
@@ -28,9 +28,9 @@ class TowingDriverApp extends StatelessWidget {
       title: 'Roacs Towing - Driver Partner',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme(context),
-      darkTheme: AppTheme.darkTheme(context),
-      themeMode: ThemeMode.dark, // Driver apps default to sleek, high-contrast dark mode
-      home: const DashboardScreen(),
+      darkTheme: AppTheme.lightTheme(context), // Enforces premium light theme as instructed
+      themeMode: ThemeMode.light,
+      home: const DriverMainShell(),
     );
   }
 }
