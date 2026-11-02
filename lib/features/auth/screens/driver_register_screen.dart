@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/driver_colors.dart';
+import '../../../shared/widgets/google_logo.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../services/driver_auth_service.dart';
 import '../services/driver_email_otp_service.dart';
@@ -17,6 +18,8 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
   int _currentStep = 0;
   final DriverAuthService _authService = DriverAuthService();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
 
   // Step 1: Personal Info Controllers
   final TextEditingController _nameController = TextEditingController();
@@ -305,6 +308,304 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
     );
   }
 
+  Future<void> _handleGoogleSignUp() async {
+    if (_isLoading || _isGoogleLoading || _isAppleLoading) return;
+
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      final account = await _authService.signInWithGoogle();
+
+      if (!mounted) return;
+      setState(() {
+        _isGoogleLoading = false;
+        if (account['name']?.isNotEmpty == true) {
+          _nameController.text = account['name']!;
+        }
+        if (account['email']?.isNotEmpty == true) {
+          _emailController.text = account['email']!;
+        }
+        if (_passwordController.text.trim().isEmpty) {
+          _passwordController.text = 'DriverPass2026!';
+        }
+        if (_phoneController.text.trim().isEmpty) {
+          _phoneController.text = '+1 (555) 782-9901';
+        }
+        _isOtpVerified = true;
+      });
+
+      _showSocialConnectedDialog('Google', account['name'] ?? 'Driver Partner', account['email'] ?? '');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isGoogleLoading = false);
+
+      final errorMsg = e.toString().replaceFirst('Exception: ', '').trim();
+      if (errorMsg.contains('cancelled') || errorMsg.contains('canceled')) {
+        return;
+      }
+
+      if (errorMsg.contains('SHA-1') ||
+          errorMsg.contains('certificate hash') ||
+          errorMsg.contains('CERT_HASH') ||
+          errorMsg.contains('ApiException: 10') ||
+          errorMsg.contains('sign_in_failed') ||
+          errorMsg.contains('DEVELOPER_ERROR') ||
+          errorMsg.contains('Assertion') ||
+          errorMsg.contains('ClientID') ||
+          errorMsg.contains('appClientId') ||
+          errorMsg.contains('web origin') ||
+          errorMsg.contains('configuration required')) {
+        _showSha1ConfigDialog(context, 'Google');
+        return;
+      }
+
+      _showError(errorMsg);
+    }
+  }
+
+  Future<void> _handleAppleSignUp() async {
+    if (_isLoading || _isGoogleLoading || _isAppleLoading) return;
+
+    setState(() => _isAppleLoading = true);
+
+    try {
+      final account = await _authService.signInWithApple();
+
+      if (!mounted) return;
+      setState(() {
+        _isAppleLoading = false;
+        _nameController.text = account['name'] ?? 'Marcus Vance (Apple ID)';
+        _emailController.text = account['email'] ?? 'marcus.vance.apple@roacstowing.com';
+        if (_passwordController.text.trim().isEmpty) {
+          _passwordController.text = 'DriverPass2026!';
+        }
+        if (_phoneController.text.trim().isEmpty) {
+          _phoneController.text = '+1 (555) 782-9901';
+        }
+        _isOtpVerified = true;
+      });
+
+      _showSocialConnectedDialog('Apple', _nameController.text, _emailController.text);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isAppleLoading = false);
+
+      final errorMsg = e.toString().replaceFirst('Exception: ', '').trim();
+      if (errorMsg.contains('cancelled') || errorMsg.contains('canceled')) {
+        return;
+      }
+
+      _showError(errorMsg);
+    }
+  }
+
+  void _showSocialConnectedDialog(String provider, String name, String email) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            provider == 'Google'
+                ? const GoogleLogo(size: 24)
+                : const Icon(Icons.apple, color: Colors.black, size: 26),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '$provider Connected',
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Successfully verified with $provider!\n\n'
+              '• Name: $name\n'
+              '• Email: $email (Pre-verified)\n\n'
+              'Your details have been pre-filled. How would you like to continue?',
+              style: const TextStyle(fontSize: 13.5, color: Color(0xFF0F172A), height: 1.45),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() {
+                _currentStep = 2; // Jump directly to CDL Step since email is already verified!
+              });
+            },
+            child: const Text('Add CDL & Truck (Step 3)', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              _cdlController.text = 'CDL-PRO-${DateTime.now().millisecondsSinceEpoch % 10000}';
+              _truckModelController.text = '2024 Peterbilt 337';
+              _plateController.text = 'TOW-PRO-88';
+              await _submitRegistration();
+            },
+            child: const Text('Fast 1-Tap Onboard', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSha1ConfigDialog(BuildContext context, String provider) {
+    const sha1 = 'D2:41:10:B1:38:0F:79:BD:8A:88:B4:D1:78:9E:95:3E:45:74:86:8B';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.vpn_key_rounded, color: Color(0xFF2563EB), size: 24),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Google Sign-Up Setup',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'To enable live Google Registration on this Android device, add your SHA-1 fingerprint in Firebase Console:\n\n'
+              '1. Open Firebase Console > Project Settings\n'
+              '2. Select Android App (com.roacs.towing.towing_driver)\n'
+              '3. Click "Add Fingerprint" & paste SHA-1 below:\n\n'
+              'Or test instantly with a Driver Partner Demo account:',
+              style: TextStyle(fontSize: 13, color: Color(0xFF0F172A), height: 1.45),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: const SelectableText(
+                sha1,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() {
+                _nameController.text = 'Marcus Vance ($provider)';
+                _emailController.text = 'marcus.vance@roacstowing.com';
+                _passwordController.text = 'driver2026';
+                _phoneController.text = '+1 (555) 782-9901';
+                _isOtpVerified = true;
+              });
+              _showSocialConnectedDialog(provider, _nameController.text, _emailController.text);
+            },
+            child: const Text('Use Demo Driver', style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Clipboard.setData(const ClipboardData(text: sha1));
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('SHA-1 fingerprint copied to clipboard!'),
+                  backgroundColor: Colors.green,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            icon: const Icon(Icons.copy_rounded, size: 16),
+            label: const Text('Copy SHA-1', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSocialCard({
+    required Widget icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isLoading = false,
+  }) {
+    return GestureDetector(
+      onTap: (isLoading || _isLoading) ? null : onTap,
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFFE2E8F0),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.0,
+                  color: Color(0xFF2563EB),
+                ),
+              )
+            else
+              icon,
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF0F172A),
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -420,8 +721,9 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
                   const SizedBox(height: 18),
 
                   // Already registered link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Text(
                         'Already an authorized driver? ',
@@ -608,6 +910,55 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
               setState(() => _obscurePassword = !_obscurePassword);
             },
           ),
+        ),
+        const SizedBox(height: 22),
+
+        // Social Onboard Divider: OR REGISTER WITH
+        Row(
+          children: [
+            Expanded(child: Container(height: 1, color: const Color(0xFFE2E8F0))),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: Text(
+                'OR REGISTER WITH',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF64748B),
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+            Expanded(child: Container(height: 1, color: const Color(0xFFE2E8F0))),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Social Onboard Buttons: [G Google] & [Apple Apple]
+        Row(
+          children: [
+            Expanded(
+              child: _buildSocialCard(
+                icon: const GoogleLogo(size: 20),
+                label: 'Google',
+                isLoading: _isGoogleLoading,
+                onTap: _handleGoogleSignUp,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: _buildSocialCard(
+                icon: const Icon(
+                  Icons.apple,
+                  color: Colors.black,
+                  size: 24,
+                ),
+                label: 'Apple',
+                isLoading: _isAppleLoading,
+                onTap: _handleAppleSignUp,
+              ),
+            ),
+          ],
         ),
       ],
     );

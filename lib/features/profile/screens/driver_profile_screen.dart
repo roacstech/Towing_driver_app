@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/localization/driver_language_service.dart';
 import '../../auth/screens/driver_login_screen.dart';
 import '../../auth/services/driver_auth_service.dart';
 import '../../documents/screens/driver_document_upload_screen.dart';
@@ -17,7 +18,6 @@ class DriverProfileScreen extends StatefulWidget {
 
 class _DriverProfileScreenState extends State<DriverProfileScreen> {
   final DriverJobService _jobService = DriverJobService();
-  String _selectedLanguage = 'English';
 
   @override
   Widget build(BuildContext context) {
@@ -33,9 +33,9 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
-        title: const Text(
-          'My Profile',
-          style: TextStyle(
+        title: Text(
+          'my_profile'.tr,
+          style: const TextStyle(
             color: Colors.black,
             fontSize: 19,
             fontWeight: FontWeight.w800,
@@ -55,14 +55,14 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                     borderRadius: BorderRadius.circular(20),
                     color: Colors.white,
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.headset_mic_outlined, size: 16, color: Colors.black87),
-                      SizedBox(width: 6),
+                      const Icon(Icons.headset_mic_outlined, size: 16, color: Colors.black87),
+                      const SizedBox(width: 6),
                       Text(
-                        'Help',
-                        style: TextStyle(
+                        'help'.tr,
+                        style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: Colors.black87,
@@ -223,9 +223,9 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              const Text(
-                                'RATING >',
-                                style: TextStyle(
+                              Text(
+                                'rating'.tr,
+                                style: const TextStyle(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.5,
@@ -249,9 +249,9 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'ORDERS',
-                            style: TextStyle(
+                          Text(
+                            'orders'.tr,
+                            style: const TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
@@ -273,9 +273,9 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'MONTHS',
-                            style: TextStyle(
+                          Text(
+                            'months'.tr,
+                            style: const TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
@@ -301,12 +301,12 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                 // 5. Menu List Items
                 _buildMenuItem(
                   icon: Icons.speed_rounded,
-                  title: 'Best Performance',
+                  title: 'best_performance'.tr,
                   onTap: () => _showPerformanceSheet(context, driver),
                 ),
                 _buildMenuItem(
                   icon: Icons.account_circle_outlined,
-                  title: 'Profile Info',
+                  title: 'profile_info'.tr,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -317,12 +317,12 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                 ),
                 _buildMenuItem(
                   icon: Icons.badge_outlined,
-                  title: 'Rapido ID Card',
+                  title: 'id_card'.tr,
                   onTap: () => _showIdCardDialog(context, driver),
                 ),
                 _buildMenuItem(
                   icon: Icons.folder_shared_outlined,
-                  title: 'Documents (RC, DL, PAN)',
+                  title: 'documents'.tr,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -333,7 +333,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                 ),
                 _buildMenuItem(
                   icon: Icons.translate_rounded,
-                  title: 'Language Settings',
+                  title: 'language_settings'.tr,
                   onTap: () => _showLanguageDialog(context),
                 ),
 
@@ -353,14 +353,14 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                       ),
                       backgroundColor: Colors.white,
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.power_settings_new_rounded, size: 18, color: Colors.black),
-                        SizedBox(width: 8),
+                        const Icon(Icons.power_settings_new_rounded, size: 18, color: Colors.black),
+                        const SizedBox(width: 8),
                         Text(
-                          'Logout',
-                          style: TextStyle(
+                          'logout'.tr,
+                          style: const TextStyle(
                             color: Colors.black,
                             fontSize: 14.5,
                             fontWeight: FontWeight.w700,
@@ -387,14 +387,14 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                         borderRadius: BorderRadius.circular(28),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.delete_outline_rounded, size: 18, color: Colors.white),
-                        SizedBox(width: 8),
+                        const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.white),
+                        const SizedBox(width: 8),
                         Text(
-                          'Delete Account',
-                          style: TextStyle(
+                          'delete_account'.tr,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14.5,
                             fontWeight: FontWeight.w700,
@@ -575,7 +575,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                       ),
                       const SizedBox(width: 8),
                       const Text(
-                        'Rapido ID Card',
+                        'ID Card',
                         style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                       ),
                     ],
@@ -806,21 +806,33 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.translate_rounded, color: Colors.black),
-              SizedBox(width: 10),
-              Text('Language Settings', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+              const Icon(Icons.translate_rounded, color: Colors.black),
+              const SizedBox(width: 10),
+              Text('select_language'.tr, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: languages.map((lang) {
-              final isSelected = _selectedLanguage == lang;
+              final isSelected = DriverLanguageService().currentLanguage == lang;
               return InkWell(
-                onTap: () {
-                  setState(() => _selectedLanguage = lang);
-                  Navigator.pop(ctx);
+                onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  await DriverLanguageService().setLanguage(lang);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (mounted) {
+                    setState(() {});
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('lang_updated'.tr),
+                        backgroundColor: Colors.black87,
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
                 },
                 borderRadius: BorderRadius.circular(10),
                 child: Padding(
@@ -968,9 +980,9 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
             ),
 
             // Title
-            const Text(
-              'Logout',
-              style: TextStyle(
+            Text(
+              'logout'.tr,
+              style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF111827),
@@ -980,9 +992,9 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
             const SizedBox(height: 6),
 
             // Subtitle
-            const Text(
-              'Are you sure you want to Log out?',
-              style: TextStyle(
+            Text(
+              'are_you_sure_logout'.tr,
+              style: const TextStyle(
                 fontSize: 14.5,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF4B5563),
@@ -1012,9 +1024,9 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-                child: const Text(
-                  'Yes',
-                  style: TextStyle(
+                child: Text(
+                  'yes'.tr,
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: Colors.black,
@@ -1038,9 +1050,9 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                   ),
                   backgroundColor: Colors.white,
                 ),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(
+                child: Text(
+                  'cancel'.tr,
+                  style: const TextStyle(
                     color: Colors.black,
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -1060,14 +1072,12 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Delete Account', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEF4444))),
-        content: const Text(
-          'This action is irreversible. All your profile data, completed order history, and driver credentials will be permanently erased.',
-        ),
+        title: Text('delete_account'.tr, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEF4444))),
+        content: Text('cannot_be_undone'.tr),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            child: Text('cancel'.tr, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -1087,7 +1097,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
               backgroundColor: const Color(0xFF1D0B09),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text('delete'.tr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

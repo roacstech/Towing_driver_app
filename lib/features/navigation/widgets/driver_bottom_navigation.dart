@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/driver_colors.dart';
+import '../../../core/localization/driver_language_service.dart';
 
 class DriverBottomNavigation extends StatelessWidget {
   final int currentIndex;
@@ -39,25 +40,25 @@ class DriverBottomNavigation extends StatelessWidget {
                 index: 0,
                 icon: Icons.home_rounded,
                 activeIcon: Icons.home_rounded,
-                label: 'Home',
+                label: DriverLanguageService().tr('home'),
               ),
               _buildNavItem(
                 index: 1,
                 icon: Icons.chat_bubble_outline_rounded,
                 activeIcon: Icons.chat_bubble_rounded,
-                label: 'Requests',
+                label: DriverLanguageService().tr('requests'),
               ),
               _buildNavItem(
                 index: 2,
                 icon: Icons.credit_card_outlined,
                 activeIcon: Icons.credit_card_rounded,
-                label: 'Earnings',
+                label: DriverLanguageService().tr('earnings'),
               ),
               _buildNavItem(
                 index: 3,
                 icon: Icons.person_outline_rounded,
                 activeIcon: Icons.person_rounded,
-                label: 'Profile',
+                label: DriverLanguageService().tr('profile'),
               ),
             ],
           ),
