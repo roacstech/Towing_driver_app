@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/driver_colors.dart';
+import '../../auth/screens/driver_login_screen.dart';
+import '../../auth/services/driver_auth_service.dart';
+import '../../documents/screens/driver_document_upload_screen.dart';
 import '../../jobs/services/driver_job_service.dart';
 
 class DriverProfileScreen extends StatelessWidget {
@@ -288,9 +291,92 @@ class DriverProfileScreen extends StatelessWidget {
                       _buildDocItem('Commercial Driver License (CDL-A)', 'Verified · Exp. 2028', Icons.badge_outlined),
                       _buildDocItem('DOT Medical Certificate', 'Compliant · Exp. May 2027', Icons.medical_services_outlined),
                       _buildDocItem('Towing & Recovery Association Card', 'Level 2 Certified Master', Icons.card_membership_outlined),
+                      const SizedBox(height: 14),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const DriverDocumentUploadScreen(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: DriverColors.blueTint,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: DriverColors.blueBorder),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(
+                                Icons.cloud_upload_outlined,
+                                color: DriverColors.electricBlue,
+                                size: 20,
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Manage & Upload Documents',
+                                      style: TextStyle(
+                                        color: DriverColors.textNavy,
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Upload CDL, Registration, COI, and DOT Inspection',
+                                      style: TextStyle(
+                                        color: DriverColors.textSecondary,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                color: DriverColors.electricBlue,
+                                size: 14,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
+
+                const SizedBox(height: 24),
+
+                // 5. Sign Out Driver Account
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await DriverAuthService().logout();
+                    if (context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (ctx) => const DriverLoginScreen()),
+                        (route) => false,
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.logout_rounded, size: 18),
+                  label: const Text('Sign Out Driver Account', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFEE2E2),
+                    foregroundColor: DriverColors.alertRed,
+                    side: const BorderSide(color: Color(0xFFFECACA)),
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                ),
+                const SizedBox(height: 20),
               ],
             );
           },
