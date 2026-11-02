@@ -24,97 +24,103 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
       builder: (context, activeJob, _) {
         final job = activeJob ?? widget.job;
 
-        final driverPos = const LatLng(37.7765, -122.4172);
-        final pickupPos = LatLng(job.pickupLat, job.pickupLng);
-        final dropPos = LatLng(job.dropLat, job.dropLng);
+        return ValueListenableBuilder<LatLng>(
+          valueListenable: DriverJobService().driverLocationNotifier,
+          builder: (context, liveDriverPos, _) {
+            final driverPos = (job.driverLat != null && job.driverLng != null)
+                ? LatLng(job.driverLat!, job.driverLng!)
+                : liveDriverPos;
+            final customerPos = LatLng(job.effectiveCustomerLat, job.effectiveCustomerLng);
+            final pickupPos = LatLng(job.pickupLat, job.pickupLng);
+            final dropPos = LatLng(job.dropLat, job.dropLng);
 
-        return Scaffold(
-          backgroundColor: DriverColors.scaffoldBg,
-          body: Stack(
-            children: [
-              // 1. Live Interactive Flutter Map
-              FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: job.status == JobStatus.towing ? dropPos : pickupPos,
-                  initialZoom: 13.8,
-                ),
+            return Scaffold(
+              backgroundColor: DriverColors.scaffoldBg,
+              body: Stack(
                 children: [
-                  TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.roacs.towing_driver',
-                  ),
-                  PolylineLayer(
-                    polylines: [
-                      // Glow
-                      Polyline(
-                        points: job.status == JobStatus.towing
-                            ? [pickupPos, dropPos]
-                            : [driverPos, pickupPos],
-                        strokeWidth: 8.0,
-                        color: DriverColors.electricBlue.withValues(alpha: 0.3),
+                  // 1. Live Interactive Flutter Map
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: job.status == JobStatus.towing ? dropPos : customerPos,
+                      initialZoom: 13.8,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.roacs.towing_driver',
                       ),
-                      // Main line
-                      Polyline(
-                        points: job.status == JobStatus.towing
-                            ? [pickupPos, dropPos]
-                            : [driverPos, pickupPos],
-                        strokeWidth: 4.5,
-                        color: DriverColors.electricBlue,
-                      ),
-                    ],
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      // Driver Tow Truck Marker
-                      Marker(
-                        point: driverPos,
-                        width: 44,
-                        height: 44,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: DriverColors.navy900,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                            boxShadow: DriverColors.cardShadow,
+                      PolylineLayer(
+                        polylines: [
+                          // Glow
+                          Polyline(
+                            points: job.status == JobStatus.towing
+                                ? [driverPos, dropPos]
+                                : [driverPos, customerPos],
+                            strokeWidth: 8.0,
+                            color: DriverColors.electricBlue.withValues(alpha: 0.3),
                           ),
-                          child: const Icon(Icons.fire_truck_rounded, color: Colors.white, size: 22),
-                        ),
-                      ),
-                      // Pickup Marker
-                      Marker(
-                        point: pickupPos,
-                        width: 40,
-                        height: 40,
-                        child: Container(
-                          decoration: BoxDecoration(
+                          // Main line
+                          Polyline(
+                            points: job.status == JobStatus.towing
+                                ? [driverPos, dropPos]
+                                : [driverPos, customerPos],
+                            strokeWidth: 4.5,
                             color: DriverColors.electricBlue,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                            boxShadow: DriverColors.cardShadow,
                           ),
-                          child: const Icon(Icons.car_crash_rounded, color: Colors.white, size: 20),
-                        ),
+                        ],
                       ),
-                      // Dropoff Marker
-                      Marker(
-                        point: dropPos,
-                        width: 40,
-                        height: 40,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: DriverColors.emeraldGreen,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                            boxShadow: DriverColors.cardShadow,
+                      MarkerLayer(
+                        markers: [
+                          // Driver Tow Truck Marker (Live Driver Location)
+                          Marker(
+                            point: driverPos,
+                            width: 44,
+                            height: 44,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: DriverColors.navy900,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: DriverColors.cardShadow,
+                              ),
+                              child: const Icon(Icons.fire_truck_rounded, color: Colors.white, size: 22),
+                            ),
                           ),
-                          child: const Icon(Icons.flag_rounded, color: Colors.white, size: 20),
-                        ),
+                          // Customer Live Location Marker
+                          Marker(
+                            point: customerPos,
+                            width: 44,
+                            height: 44,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: DriverColors.electricBlue,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: DriverColors.cardShadow,
+                              ),
+                              child: const Icon(Icons.person_pin_circle_rounded, color: Colors.white, size: 24),
+                            ),
+                          ),
+                          // Dropoff Destination Marker
+                          Marker(
+                            point: dropPos,
+                            width: 40,
+                            height: 40,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: DriverColors.emeraldGreen,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: DriverColors.cardShadow,
+                              ),
+                              child: const Icon(Icons.flag_rounded, color: Colors.white, size: 20),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
 
               // 2. Top Floating Navigation Bar with Status
               SafeArea(
@@ -340,9 +346,11 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             ],
           ),
         );
-      },
-    );
-  }
+        },
+      );
+    },
+  );
+}
 
   IconData _getIconForStatus(JobStatus status) {
     switch (status) {

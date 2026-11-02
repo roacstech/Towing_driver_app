@@ -10,7 +10,7 @@ class CenteredLayeredCardStack extends StatelessWidget {
   final Function(TowJob) onAccept;
   final Function(TowJob) onReject;
   final Function(TowJob) onTapJob;
-  final VoidCallback onResetDemo;
+  final VoidCallback? onResetDemo;
 
   const CenteredLayeredCardStack({
     super.key,
@@ -20,7 +20,7 @@ class CenteredLayeredCardStack extends StatelessWidget {
     required this.onAccept,
     required this.onReject,
     required this.onTapJob,
-    required this.onResetDemo,
+    this.onResetDemo,
   });
 
   @override
@@ -124,7 +124,7 @@ class CenteredLayeredCardStack extends StatelessWidget {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
@@ -141,21 +141,21 @@ class CenteredLayeredCardStack extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 56,
-            height: 56,
-            decoration: const BoxDecoration(
-              color: Color(0xFFECFDF5),
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2563EB).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.check_circle_outline_rounded,
-              color: Color(0xFF10B981),
+              Icons.radar_rounded,
+              color: Color(0xFF2563EB),
               size: 32,
             ),
           ),
           const SizedBox(height: 14),
           const Text(
-            'All Dispatches Reviewed',
+            'Looking for Nearby Requests',
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w800,
@@ -164,7 +164,7 @@ class CenteredLayeredCardStack extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'You are online. New nearby towing and recovery calls will appear automatically.',
+            'You are online and ready. New customer towing requests within your radius will appear here in real time.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
@@ -172,18 +172,37 @@ class CenteredLayeredCardStack extends StatelessWidget {
               height: 1.35,
             ),
           ),
-          const SizedBox(height: 18),
-          ElevatedButton.icon(
-            onPressed: onResetDemo,
-            icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text('Reset Demo Jobs'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCFCE7),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 7,
+                  height: 7,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Color(0xFF16A34A),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 6),
+                Text(
+                  'DISPATCH RADAR ACTIVE',
+                  style: TextStyle(
+                    color: Color(0xFF15803D),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

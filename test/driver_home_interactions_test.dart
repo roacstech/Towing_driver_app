@@ -3,10 +3,38 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:towing_driver/features/auth/services/driver_auth_service.dart';
 import 'package:towing_driver/features/home/widgets/swipeable_request_card.dart';
+import 'package:towing_driver/features/jobs/models/tow_job.dart';
 import 'package:towing_driver/features/jobs/screens/request_list_screen.dart';
 import 'package:towing_driver/features/jobs/screens/trip_details_screen.dart';
 import 'package:towing_driver/features/jobs/services/driver_job_service.dart';
 import 'package:towing_driver/features/navigation/screens/driver_main_shell.dart';
+
+TowJob _createTestJob({required String id, String title = 'Vehicle Transport'}) {
+  return TowJob(
+    id: id,
+    serviceTitle: title,
+    requestType: 'Vehicle Transport',
+    vehicleName: 'Ford F-150',
+    licensePlate: 'MD-8492',
+    pickupAddress: '7800 Georgia Ave, Silver Spring, MD',
+    dropAddress: '4521 Lee Hwy, Arlington, VA',
+    pickupLat: 38.9877,
+    pickupLng: -77.0270,
+    dropLat: 38.8950,
+    dropLng: -77.1150,
+    distanceToPickup: '4.4 mi',
+    pickupEta: '12 min',
+    tripDuration: '28 min',
+    customerName: 'Marcus Bennett',
+    customerPhone: '+1 (555) 782-1200',
+    customerRating: 4.95,
+    totalCost: '\$180.00',
+    estimatedPayout: 180.00,
+    etaOrDuration: '12 min ETA (4.4 mi)',
+    status: JobStatus.pending,
+    createdAt: DateTime.now(),
+  );
+}
 
 void main() {
   setUp(() {
@@ -21,6 +49,21 @@ void main() {
 
   tearDown(() {
     DriverJobService().stopDispatchPolling();
+  });
+
+  testWidgets('Test online driver starts with 0 demo requests and shows Dispatch Radar Active', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(home: DriverMainShell()));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    // Zero demo requests exist
+    expect(DriverJobService().availableRequests, isEmpty);
+    expect(find.text('Looking for Nearby Requests'), findsOneWidget);
+    expect(find.text('DISPATCH RADAR ACTIVE'), findsOneWidget);
   });
 
   testWidgets('Test Requests tab navigation from Driver Bottom Navigation', (WidgetTester tester) async {
@@ -49,6 +92,10 @@ void main() {
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.resetPhysicalSize);
 
+    final testJob = _createTestJob(id: 'TOW-1001');
+    DriverJobService().availableRequestsNotifier.value = [testJob];
+    DriverJobService().selectedRequestNotifier.value = testJob;
+
     await tester.pumpWidget(const MaterialApp(home: DriverMainShell()));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
@@ -69,12 +116,17 @@ void main() {
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.resetPhysicalSize);
 
+    final job1 = _createTestJob(id: 'TOW-1001');
+    final job2 = _createTestJob(id: 'TOW-1002');
+    DriverJobService().availableRequestsNotifier.value = [job1, job2];
+    DriverJobService().selectedRequestNotifier.value = job1;
+
     await tester.pumpWidget(const MaterialApp(home: DriverMainShell()));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
     final initialCount = DriverJobService().availableRequests.length;
-    expect(initialCount, greaterThan(1));
+    expect(initialCount, equals(2));
 
     // Drag sheet up to reveal action buttons
     await tester.drag(find.byType(SwipeableRequestCard).first, const Offset(0, -300));
@@ -131,6 +183,10 @@ void main() {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.resetPhysicalSize);
+
+    final job1 = _createTestJob(id: 'TOW-1001');
+    DriverJobService().availableRequestsNotifier.value = [job1];
+    DriverJobService().selectedRequestNotifier.value = job1;
 
     await tester.pumpWidget(const MaterialApp(home: DriverMainShell()));
     await tester.pump();
@@ -198,3 +254,4 @@ void main() {
     expect(find.text('\$360.00'), findsWidgets);
   });
 }
+

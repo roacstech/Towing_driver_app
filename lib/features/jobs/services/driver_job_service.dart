@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/api_config.dart';
 import '../../profile/models/driver_profile.dart';
@@ -15,18 +17,23 @@ class DriverJobService {
   final ValueNotifier<DriverProfile> driverNotifier =
       ValueNotifier<DriverProfile>(DriverProfile.mockDriver);
 
-  // Available list of requests for the card stack and 'See All' list
+  // Available list of requests for the card stack and 'See All' list (real requests from backend only)
   final ValueNotifier<List<TowJob>> availableRequestsNotifier =
-      ValueNotifier<List<TowJob>>(List<TowJob>.from(TowJob.sampleRequests));
+      ValueNotifier<List<TowJob>>([]);
 
   // The currently focused/selected request card (syncs with the top map's route polyline)
   final ValueNotifier<TowJob?> selectedRequestNotifier =
-      ValueNotifier<TowJob?>(TowJob.sampleRequests.first);
+      ValueNotifier<TowJob?>(null);
 
   final ValueNotifier<TowJob?> activeJobNotifier = ValueNotifier<TowJob?>(null);
   final ValueNotifier<TowJob?> pendingRequestNotifier = ValueNotifier<TowJob?>(null);
   final ValueNotifier<List<TowJob>> completedJobsNotifier =
       ValueNotifier<List<TowJob>>([]);
+
+  // Driver live location notifier
+  final ValueNotifier<LatLng> driverLocationNotifier =
+      ValueNotifier<LatLng>(const LatLng(37.7765, -122.4172));
+  double driverHeading = 45.0;
 
   DriverProfile get driver => driverNotifier.value;
   List<TowJob> get availableRequests => availableRequestsNotifier.value;
@@ -34,9 +41,11 @@ class DriverJobService {
   TowJob? get activeJob => activeJobNotifier.value;
   TowJob? get pendingRequest => pendingRequestNotifier.value;
   List<TowJob> get completedJobs => completedJobsNotifier.value;
+  LatLng get currentDriverLocation => driverLocationNotifier.value;
 
   Timer? _pollingTimer;
   Timer? _initialCheckTimer;
+  Timer? _activeTrackingTimer;
 
   Future<void> init() async {
     try {
@@ -45,15 +54,46 @@ class DriverJobService {
       driverNotifier.value = driver.copyWith(isOnline: isOnline);
     } catch (_) {}
 
-    _loadSampleCompletedJobs();
+    await updateDriverGpsLocation();
 
     // Ensure selected request defaults to first available
     if (availableRequests.isNotEmpty) {
       selectedRequestNotifier.value = availableRequests.first;
+    } else {
+      selectedRequestNotifier.value = null;
     }
 
     if (driver.isOnline) {
       startDispatchPolling();
+    }
+  }
+
+  /// Obtains current GPS coordinates of the tow truck driver
+  Future<void> updateDriverGpsLocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      if (permission == LocationPermission.deniedForever) return;
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 3),
+        ),
+      );
+
+      driverLocationNotifier.value = LatLng(position.latitude, position.longitude);
+      if (position.heading != 0.0) {
+        driverHeading = position.heading;
+      }
+    } catch (_) {
+      // Retain current position if GPS call fails or running in headless/mock environment
     }
   }
 
@@ -79,7 +119,7 @@ class DriverJobService {
 
   void startDispatchPolling() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (driver.isOnline && activeJob == null) {
         checkBackendForPendingJobs();
       }
@@ -87,7 +127,7 @@ class DriverJobService {
 
     if (activeJob == null) {
       _initialCheckTimer?.cancel();
-      _initialCheckTimer = Timer(const Duration(seconds: 2), () {
+      _initialCheckTimer = Timer(const Duration(milliseconds: 500), () {
         checkBackendForPendingJobs();
       });
     }
@@ -103,26 +143,68 @@ class DriverJobService {
   /// Checks shared PostgreSQL / REST backend for new tows created by Customer App
   Future<void> checkBackendForPendingJobs() async {
     try {
-      final uri = Uri.parse(ApiConfig.towsEndpoint);
-      final res = await http.get(uri).timeout(const Duration(seconds: 4));
+      await updateDriverGpsLocation();
+      final lat = driverLocationNotifier.value.latitude;
+      final lng = driverLocationNotifier.value.longitude;
 
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        if (body['success'] == true && body['data'] is List) {
-          final List list = body['data'];
-          final activeOrPending = list
-              .map((j) => TowJob.fromJson(j as Map<String, dynamic>))
-              .where((t) => t.status == JobStatus.pending || t.status == JobStatus.accepted)
-              .toList();
+      final List<dynamic> rawJobsList = [];
 
-          if (activeOrPending.isNotEmpty) {
-            // Merge into available if not already present
-            final current = List<TowJob>.from(availableRequestsNotifier.value);
-            for (final incoming in activeOrPending) {
-              if (!current.any((e) => e.id == incoming.id)) {
-                current.insert(0, incoming);
+      // 1. Primary driver dispatch query with driver credentials
+      try {
+        final uri = Uri.parse(
+          '${ApiConfig.towsEndpoint}?for_drivers=true&role=driver&firebase_uid=DRV-${driver.id}&driver_id=DRV-${driver.id}&driver_lat=$lat&driver_lng=$lng',
+        );
+        final res = await http.get(uri).timeout(const Duration(seconds: 4));
+        if (res.statusCode == 200) {
+          final body = jsonDecode(res.body);
+          if (body['success'] == true && body['data'] is List) {
+            rawJobsList.addAll(body['data']);
+          }
+        }
+      } catch (_) {}
+
+      // 2. Dispatch queue fallback query
+      try {
+        final dispatchUri = Uri.parse('${ApiConfig.towsEndpoint}?firebase_uid=dispatch_queue');
+        final dispatchRes = await http.get(dispatchUri).timeout(const Duration(seconds: 3));
+        if (dispatchRes.statusCode == 200) {
+          final body = jsonDecode(dispatchRes.body);
+          if (body['success'] == true && body['data'] is List) {
+            for (final item in body['data']) {
+              if (item is Map && !rawJobsList.any((x) => x['id'] == item['id'])) {
+                rawJobsList.add(item);
               }
             }
+          }
+        }
+      } catch (_) {}
+
+      if (rawJobsList.isNotEmpty) {
+        final activeOrPending = rawJobsList
+            .map((j) => TowJob.fromJson(j as Map<String, dynamic>))
+            .where((t) => t.status == JobStatus.pending || t.status == JobStatus.accepted)
+            .toList();
+
+        if (activeOrPending.isNotEmpty) {
+          // Merge into available if not already present
+          final current = List<TowJob>.from(availableRequestsNotifier.value);
+          bool hasChange = false;
+          for (final incoming in activeOrPending) {
+            final idx = current.indexWhere((e) => e.id == incoming.id);
+            if (idx == -1) {
+              // New incoming customer request! Place at top of queue
+              current.insert(0, incoming);
+              hasChange = true;
+            } else {
+              // Update customer live location if updated
+              if (current[idx].effectiveCustomerLat != incoming.effectiveCustomerLat ||
+                  current[idx].effectiveCustomerLng != incoming.effectiveCustomerLng) {
+                current[idx] = incoming;
+                hasChange = true;
+              }
+            }
+          }
+          if (hasChange) {
             availableRequestsNotifier.value = current;
             if (selectedRequest == null && current.isNotEmpty) {
               selectedRequestNotifier.value = current.first;
@@ -131,13 +213,21 @@ class DriverJobService {
         }
       }
     } catch (_) {
-      // Backend is optional or offline; realistic mock requests remain active
+      // Backend is offline or network error
     }
   }
 
   /// Driver accepts a job request (via right-swipe or explicit Accept button)
   Future<void> acceptJob(TowJob job) async {
-    final acceptedJob = job.copyWith(status: JobStatus.accepted);
+    await updateDriverGpsLocation();
+    final currentPos = driverLocationNotifier.value;
+
+    final acceptedJob = job.copyWith(
+      status: JobStatus.accepted,
+      driverLat: currentPos.latitude,
+      driverLng: currentPos.longitude,
+      driverHeading: driverHeading,
+    );
     activeJobNotifier.value = acceptedJob;
     pendingRequestNotifier.value = null;
 
@@ -153,15 +243,102 @@ class DriverJobService {
       selectedRequestNotifier.value = null;
     }
 
-    // Notify backend
+    // Notify backend that driver accepted the job, sending driver live details & GPS
     try {
-      final uri = Uri.parse('${ApiConfig.towsEndpoint}/${job.id}/status');
-      await http.put(
+      final uri = Uri.parse('${ApiConfig.towsEndpoint}/${job.id}/accept');
+      final res = await http.put(
         uri,
         headers: {'content-type': 'application/json'},
-        body: jsonEncode({'status': 'active'}),
+        body: jsonEncode({
+          'driver_id': 'DRV-${driver.id}',
+          'driver_name': driver.name,
+          'driver_phone': driver.phone,
+          'driver_rating': driver.rating,
+          'tow_truck_info': '${driver.truckModel} (${driver.licensePlate})',
+          'driver_lat': currentPos.latitude,
+          'driver_lng': currentPos.longitude,
+          'driver_heading': driverHeading,
+          'eta_or_duration': acceptedJob.pickupEta,
+        }),
       ).timeout(const Duration(seconds: 4));
+
+      if (res.statusCode == 404) {
+        // Fallback for deployed status endpoint
+        final statusUri = Uri.parse('${ApiConfig.towsEndpoint}/${job.id}/status');
+        await http.put(
+          statusUri,
+          headers: {'content-type': 'application/json'},
+          body: jsonEncode({
+            'status': 'active',
+            'driver_id': 'DRV-${driver.id}',
+            'driver_name': driver.name,
+            'driver_phone': driver.phone,
+            'driver_rating': driver.rating,
+            'tow_truck_info': '${driver.truckModel} (${driver.licensePlate})',
+            'driver_lat': currentPos.latitude,
+            'driver_lng': currentPos.longitude,
+            'driver_heading': driverHeading,
+          }),
+        ).timeout(const Duration(seconds: 4));
+      }
     } catch (_) {}
+
+    // Start live tracking synchronization loop
+    _startActiveJobTracking(job.id);
+  }
+
+  /// Live tracking loop: broadcasts driver's real-time GPS and retrieves customer's live GPS
+  void _startActiveJobTracking(String jobId) {
+    _activeTrackingTimer?.cancel();
+    _activeTrackingTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      final current = activeJob;
+      if (current == null || current.id != jobId) {
+        _activeTrackingTimer?.cancel();
+        return;
+      }
+
+      await updateDriverGpsLocation();
+      final currentPos = driverLocationNotifier.value;
+
+      // 1. Push driver's live GPS location to backend
+      try {
+        final pushUri = Uri.parse('${ApiConfig.towsEndpoint}/$jobId/driver-location');
+        await http.put(
+          pushUri,
+          headers: {'content-type': 'application/json'},
+          body: jsonEncode({
+            'driver_lat': currentPos.latitude,
+            'driver_lng': currentPos.longitude,
+            'driver_heading': driverHeading,
+            'status': current.status.name,
+          }),
+        ).timeout(const Duration(seconds: 3));
+      } catch (_) {}
+
+      // 2. Poll backend for customer's live location updates
+      try {
+        final getUri = Uri.parse('${ApiConfig.towsEndpoint}/$jobId?for_drivers=true');
+        final res = await http.get(getUri).timeout(const Duration(seconds: 3));
+        if (res.statusCode == 200) {
+          final body = jsonDecode(res.body);
+          if (body['success'] == true && body['data'] is Map<String, dynamic>) {
+            final towData = body['data'] as Map<String, dynamic>;
+            final updatedFromBackend = TowJob.fromJson(towData);
+
+            final custLat = (towData['customer_lat'] as num?)?.toDouble() ?? updatedFromBackend.pickupLat;
+            final custLng = (towData['customer_lng'] as num?)?.toDouble() ?? updatedFromBackend.pickupLng;
+
+            activeJobNotifier.value = current.copyWith(
+              customerLat: custLat,
+              customerLng: custLng,
+              driverLat: currentPos.latitude,
+              driverLng: currentPos.longitude,
+              driverHeading: driverHeading,
+            );
+          }
+        }
+      } catch (_) {}
+    });
   }
 
   /// Driver declines/rejects a job request (via left-swipe or explicit Decline button)
@@ -175,10 +352,10 @@ class DriverJobService {
     }
   }
 
-  /// Reloads sample requests if the driver has cleared the queue
+  /// Clears available requests
   void resetDemoRequests() {
-    availableRequestsNotifier.value = List<TowJob>.from(TowJob.sampleRequests);
-    selectedRequestNotifier.value = TowJob.sampleRequests.first;
+    availableRequestsNotifier.value = [];
+    selectedRequestNotifier.value = null;
   }
 
   Future<void> advanceJobStage() async {
@@ -220,6 +397,9 @@ class DriverJobService {
   }
 
   Future<void> _completeJob(TowJob job) async {
+    _activeTrackingTimer?.cancel();
+    _activeTrackingTimer = null;
+
     final completed = job.copyWith(status: JobStatus.completed);
     final currentList = List<TowJob>.from(completedJobsNotifier.value);
     currentList.insert(0, completed);
@@ -241,52 +421,5 @@ class DriverJobService {
         body: jsonEncode({'status': 'completed'}),
       ).timeout(const Duration(seconds: 4));
     } catch (_) {}
-  }
-
-  void _loadSampleCompletedJobs() {
-    completedJobsNotifier.value = [
-      TowJob(
-        id: 'TOW-6841',
-        serviceTitle: 'Heavy Wheel-Lift Recovery',
-        requestType: 'Vehicle Transport',
-        vehicleName: 'Ford F-150 SuperCrew',
-        licensePlate: 'CAL-9942',
-        pickupAddress: '420 Montgomery St, Financial District, SF',
-        dropAddress: 'Bay Fleet Garage, 3rd St',
-        pickupLat: 37.7925,
-        pickupLng: -122.4023,
-        dropLat: 37.7695,
-        dropLng: -122.3892,
-        customerName: 'David Miller',
-        customerPhone: '+1 (555) 782-1200',
-        totalCost: '\$160.00',
-        estimatedPayout: 160.00,
-        etaOrDuration: 'Completed in 38m',
-        status: JobStatus.completed,
-        createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-        notes: 'Dually rear wheel lift required.',
-      ),
-      TowJob(
-        id: 'TOW-5912',
-        serviceTitle: 'Standard Flatbed Tow',
-        requestType: 'Flat Tire',
-        vehicleName: 'Honda Civic Sport',
-        licensePlate: '6VBN481',
-        pickupAddress: 'Sunset Blvd & 22nd Ave, SF',
-        dropAddress: 'Golden Gate Motors, Geary Blvd',
-        pickupLat: 37.7533,
-        pickupLng: -122.4812,
-        dropLat: 37.7812,
-        dropLng: -122.4691,
-        customerName: 'Elena Rostova',
-        customerPhone: '+1 (555) 349-8811',
-        totalCost: '\$110.00',
-        estimatedPayout: 110.00,
-        etaOrDuration: 'Completed in 25m',
-        status: JobStatus.completed,
-        createdAt: DateTime.now().subtract(const Duration(hours: 6)),
-        notes: 'Flat tire and missing spare wheel.',
-      ),
-    ];
   }
 }
