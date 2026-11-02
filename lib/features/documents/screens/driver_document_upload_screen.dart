@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/driver_colors.dart';
 import '../models/driver_document.dart';
 import '../widgets/document_card.dart';
 import '../widgets/document_preview_dialog.dart';
@@ -44,7 +43,7 @@ class _DriverDocumentUploadScreenState
       ),
       DriverDocument(
         id: 'reg_02',
-        title: 'Tow Truck Registration & Cab Card',
+        title: 'Vehicle Registration (RC)',
         subtitle: 'State DMV commercial cab card for 2024 Peterbilt 337',
         documentCode: 'DOC-REG-02',
         category: DocumentCategory.vehicleCompliance,
@@ -58,10 +57,24 @@ class _DriverDocumentUploadScreenState
         uploadedAt: DateTime.now().subtract(const Duration(days: 30)),
       ),
       DriverDocument(
-        id: 'ins_03',
+        id: 'pan_03',
+        title: 'PAN Card / Tax Identification',
+        subtitle: 'Government issued Permanent Account Number for payouts',
+        documentCode: 'DOC-PAN-03',
+        category: DocumentCategory.driverIdentity,
+        status: DocumentStatus.verified,
+        icon: Icons.credit_card_rounded,
+        isRequired: true,
+        documentNumber: 'ABCDE1234F',
+        uploadedFileName: 'pan_card_verified.jpg',
+        uploadedFileSize: '1.2 MB',
+        uploadedAt: DateTime.now().subtract(const Duration(days: 60)),
+      ),
+      DriverDocument(
+        id: 'ins_04',
         title: 'Commercial Towing Liability (\$1M)',
         subtitle: 'Certificate of Insurance (COI) with on-hook & garagekeepers coverage',
-        documentCode: 'DOC-INS-03',
+        documentCode: 'DOC-INS-04',
         category: DocumentCategory.insuranceAndLegal,
         status: DocumentStatus.verified,
         icon: Icons.shield_outlined,
@@ -73,31 +86,16 @@ class _DriverDocumentUploadScreenState
         uploadedAt: DateTime.now().subtract(const Duration(days: 60)),
       ),
       DriverDocument(
-        id: 'dot_04',
+        id: 'dot_05',
         title: 'Annual DOT Safety Inspection',
         subtitle: '49 CFR Part 396 safety certificate for brakes, tires, and winch hydraulic',
-        documentCode: 'DOC-DOT-04',
+        documentCode: 'DOC-DOT-05',
         category: DocumentCategory.vehicleCompliance,
         status: DocumentStatus.pending,
         icon: Icons.fact_check_outlined,
         isRequired: true,
         documentNumber: 'DOT-INSP-2026',
         expiryDate: DateTime(2026, 12, 1),
-      ),
-      DriverDocument(
-        id: 'med_05',
-        title: "Medical Examiner's Certificate",
-        subtitle: 'FMCSA Form MCSA-5876 physical qualification for commercial drivers',
-        documentCode: 'DOC-MED-05',
-        category: DocumentCategory.driverIdentity,
-        status: DocumentStatus.underReview,
-        icon: Icons.medical_services_outlined,
-        isRequired: false,
-        documentNumber: 'FMCSA-MED-4410',
-        expiryDate: DateTime(2027, 5, 18),
-        uploadedFileName: 'dot_medical_card_scan.jpg',
-        uploadedFileSize: '1.8 MB',
-        uploadedAt: DateTime.now().subtract(const Duration(hours: 3)),
       ),
     ];
   }
@@ -131,28 +129,23 @@ class _DriverDocumentUploadScreenState
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: DriverColors.cardDark,
+            backgroundColor: Colors.black,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              side: const BorderSide(color: DriverColors.primaryOrange),
             ),
             content: Row(
               children: [
                 const Icon(
                   Icons.check_circle_rounded,
-                  color: DriverColors.onlineGreen,
+                  color: Color(0xFF10B981),
                   size: 20,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     '${doc.title} uploaded for review!',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -174,26 +167,11 @@ class _DriverDocumentUploadScreenState
   void _submitAllDocuments() {
     showDialog(
       context: context,
-      barrierDismissible: false,
       builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
           padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: DriverColors.cardDark,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: DriverColors.onlineGreen.withValues(alpha: 0.4),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.5),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -202,15 +180,15 @@ class _DriverDocumentUploadScreenState
                 height: 68,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: DriverColors.onlineGreen.withValues(alpha: 0.15),
+                  color: const Color(0xFFECFDF5),
                   border: Border.all(
-                    color: DriverColors.onlineGreen.withValues(alpha: 0.4),
+                    color: const Color(0xFFA7F3D0),
                     width: 2,
                   ),
                 ),
                 child: const Icon(
                   Icons.verified_user_rounded,
-                  color: DriverColors.onlineGreen,
+                  color: Color(0xFF10B981),
                   size: 36,
                 ),
               ),
@@ -218,19 +196,19 @@ class _DriverDocumentUploadScreenState
               const Text(
                 'Submission Sent for Approval',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF111827),
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 10),
-              Text(
-                'Your documents have been encrypted and queued for Central Towing Fleet Compliance. Verification takes 2-4 business hours.',
+              const Text(
+                'Your documents have been encrypted and queued for Compliance verification. Verification typically takes 2-4 business hours.',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: Color(0xFF6B7280),
                   fontSize: 13,
-                  height: 1.35,
+                  height: 1.4,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -243,7 +221,7 @@ class _DriverDocumentUploadScreenState
                     Navigator.of(context).pop();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: DriverColors.primaryOrange,
+                    backgroundColor: Colors.black,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -270,23 +248,23 @@ class _DriverDocumentUploadScreenState
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(24),
         decoration: const BoxDecoration(
-          color: DriverColors.cardDark,
+          color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: const [
-                Icon(Icons.shield_rounded, color: DriverColors.primaryOrange),
+            const Row(
+              children: [
+                Icon(Icons.shield_rounded, color: Color(0xFF2563EB)),
                 SizedBox(width: 10),
                 Text(
                   'Compliance Guidelines',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFF111827),
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],
@@ -298,28 +276,25 @@ class _DriverDocumentUploadScreenState
             ),
             const SizedBox(height: 12),
             _buildHelpPoint(
-              '2. Active Expiration',
-              'Documents expiring within 14 days must be renewed prior to dispatch eligibility.',
+              '2. Expiration Date Validity',
+              'Ensure all licenses, inspections, and insurance policies are current with at least 30 days remaining.',
             ),
             const SizedBox(height: 12),
             _buildHelpPoint(
-              '3. Commercial Liability',
-              'COI must list Central Towing Network as an additional certificate holder.',
+              '3. Name Matching',
+              'Driver legal name on license must match your profile and commercial liability certificate.',
             ),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton(
+              child: ElevatedButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: DriverColors.borderDark),
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text('Got It'),
+                child: const Text('Got It', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -335,18 +310,18 @@ class _DriverDocumentUploadScreenState
         Text(
           title,
           style: const TextStyle(
-            color: Colors.white,
+            color: Color(0xFF111827),
             fontSize: 13.5,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           desc,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.65),
+          style: const TextStyle(
+            color: Color(0xFF6B7280),
             fontSize: 12,
-            height: 1.3,
+            height: 1.35,
           ),
         ),
       ],
@@ -356,31 +331,32 @@ class _DriverDocumentUploadScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DriverColors.bgDark,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: DriverColors.bgDark,
+        backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
-            size: 20,
+            Icons.arrow_back,
+            color: Colors.black,
+            size: 24,
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'Driver Documents',
+          'Documents (RC, DL, PAN)',
           style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            color: Colors.black,
+            fontSize: 18.5,
+            fontWeight: FontWeight.w800,
           ),
         ),
         actions: [
           IconButton(
             icon: const Icon(
               Icons.help_outline_rounded,
-              color: Colors.white70,
+              color: Colors.black,
             ),
             tooltip: 'Guidelines',
             onPressed: _showComplianceHelp,
@@ -399,11 +375,11 @@ class _DriverDocumentUploadScreenState
                   children: [
                     // 1. Top Verification Progress Header
                     _buildVerificationProgressCard(),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
 
                     // 2. Category Filter Pills
                     _buildCategoryFilterRow(),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
 
                     // 3. Section Title
                     Row(
@@ -411,19 +387,19 @@ class _DriverDocumentUploadScreenState
                       children: [
                         Text(
                           'REQUIRED CREDENTIALS (${_filteredDocuments.length})',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
+                          style: const TextStyle(
+                            color: Color(0xFF475569),
                             fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                             letterSpacing: 0.8,
                           ),
                         ),
                         Text(
                           '${_documents.where((d) => d.status == DocumentStatus.pending).length} Pending Upload',
                           style: const TextStyle(
-                            color: DriverColors.primaryOrange,
+                            color: Color(0xFFD97706),
                             fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ],
@@ -440,7 +416,7 @@ class _DriverDocumentUploadScreenState
                       ),
                     ),
 
-                    const SizedBox(height: 80), // Padding for bottom footer
+                    const SizedBox(height: 80),
                   ],
                 ),
               ),
@@ -461,24 +437,20 @@ class _DriverDocumentUploadScreenState
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [
-            DriverColors.cardDark,
-            const Color(0xFF182844),
+            Color(0xFF1E293B),
+            Color(0xFF0F172A),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: DriverColors.primaryOrange.withValues(alpha: 0.35),
-          width: 1.2,
-        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -498,7 +470,7 @@ class _DriverDocumentUploadScreenState
                       strokeWidth: 5,
                       backgroundColor: Colors.white.withValues(alpha: 0.1),
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                        DriverColors.primaryOrange,
+                        Color(0xFF38BDF8),
                       ),
                     ),
                   ),
@@ -527,14 +499,13 @@ class _DriverDocumentUploadScreenState
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: DriverColors.primaryOrange
-                                .withValues(alpha: 0.18),
+                            color: const Color(0xFF38BDF8).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
                             'FLEET COMPLIANCE',
                             style: TextStyle(
-                              color: DriverColors.primaryOrange,
+                              color: Color(0xFF38BDF8),
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.6,
@@ -558,7 +529,7 @@ class _DriverDocumentUploadScreenState
                           ? 'All documents active & verified!'
                           : 'Upload 1 more document for full dispatch priority.',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.65),
+                        color: Colors.white.withValues(alpha: 0.7),
                         fontSize: 11.5,
                       ),
                     ),
@@ -569,12 +540,12 @@ class _DriverDocumentUploadScreenState
           ),
 
           const SizedBox(height: 14),
-          const Divider(color: DriverColors.borderDark, height: 1),
+          const Divider(color: Colors.white12, height: 1),
           const SizedBox(height: 10),
 
           // Security Trust Stamp
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(
                 Icons.lock_outline_rounded,
                 color: Color(0xFF10B981),
@@ -635,19 +606,18 @@ class _DriverDocumentUploadScreenState
               label: Text(
                 c['label'] as String,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white70,
+                  color: isSelected ? Colors.white : const Color(0xFF374151),
                   fontSize: 12.5,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
               selected: isSelected,
-              selectedColor: DriverColors.primaryOrange,
-              backgroundColor: DriverColors.cardDark,
+              selectedColor: Colors.black,
+              backgroundColor: const Color(0xFFF1F5F9),
               side: BorderSide(
-                color: isSelected
-                    ? DriverColors.primaryOrange
-                    : DriverColors.borderDark,
+                color: isSelected ? Colors.black : const Color(0xFFE2E8F0),
               ),
+              showCheckmark: false,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -667,16 +637,16 @@ class _DriverDocumentUploadScreenState
   Widget _buildStickyBottomCta() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-      decoration: BoxDecoration(
-        color: DriverColors.cardDark,
-        border: const Border(
-          top: BorderSide(color: DriverColors.borderDark),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: Color(0xFFE2E8F0)),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, -4),
           ),
         ],
       ),
@@ -686,12 +656,12 @@ class _DriverDocumentUploadScreenState
             child: ElevatedButton.icon(
               onPressed: _submitAllDocuments,
               style: ElevatedButton.styleFrom(
-                backgroundColor: DriverColors.primaryOrange,
+                backgroundColor: const Color(0xFF2563EB),
                 foregroundColor: Colors.white,
-                elevation: 4,
-                padding: const EdgeInsets.symmetric(vertical: 15),
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
               icon: const Icon(Icons.send_rounded, size: 18),
@@ -700,7 +670,7 @@ class _DriverDocumentUploadScreenState
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 0.8,
+                  letterSpacing: 0.6,
                 ),
               ),
             ),

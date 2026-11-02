@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/driver_colors.dart';
 import '../models/driver_document.dart';
 
 class DocumentCard extends StatelessWidget {
@@ -19,18 +18,18 @@ class DocumentCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: DriverColors.cardDark,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: document.status == DocumentStatus.pending
-              ? DriverColors.primaryOrange.withValues(alpha: 0.35)
-              : DriverColors.borderDark,
+              ? const Color(0xFFF59E0B).withValues(alpha: 0.5)
+              : const Color(0xFFE2E8F0),
           width: document.status == DocumentStatus.pending ? 1.4 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 14,
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
@@ -49,10 +48,10 @@ class DocumentCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: document.statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(14),
+                    color: document.statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: document.statusColor.withValues(alpha: 0.35),
+                      color: document.statusColor.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Icon(
@@ -74,10 +73,10 @@ class DocumentCard extends StatelessWidget {
                             child: Text(
                               document.title,
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: Color(0xFF0F172A),
                                 fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                height: 1.2,
+                                fontWeight: FontWeight.w800,
+                                height: 1.25,
                               ),
                             ),
                           ),
@@ -89,15 +88,15 @@ class DocumentCard extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.08),
+                                color: const Color(0xFFF1F5F9),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Text(
                                 'REQUIRED',
                                 style: TextStyle(
-                                  color: Color(0xFF94A3B8),
+                                  color: Color(0xFF64748B),
                                   fontSize: 9,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
@@ -106,10 +105,10 @@ class DocumentCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         document.subtitle,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
+                        style: const TextStyle(
+                          color: Color(0xFF64748B),
                           fontSize: 12,
-                          height: 1.3,
+                          height: 1.35,
                         ),
                       ),
                     ],
@@ -125,10 +124,10 @@ class DocumentCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: DriverColors.bgDark,
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: document.statusColor.withValues(alpha: 0.2),
+                  color: document.statusColor.withValues(alpha: 0.25),
                 ),
               ),
               child: Row(
@@ -139,7 +138,7 @@ class DocumentCard extends StatelessWidget {
                     children: [
                       Icon(
                         document.statusIcon,
-                        size: 14,
+                        size: 15,
                         color: document.statusColor,
                       ),
                       const SizedBox(width: 6),
@@ -147,9 +146,9 @@ class DocumentCard extends StatelessWidget {
                         document.statusLabel,
                         style: TextStyle(
                           color: document.statusColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.6,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ],
@@ -160,10 +159,10 @@ class DocumentCard extends StatelessWidget {
                     document.expiryDate != null
                         ? 'Exp: ${document.expiryDate!.month}/${document.expiryDate!.day}/${document.expiryDate!.year}'
                         : 'Code: ${document.documentCode}',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -179,10 +178,10 @@ class DocumentCard extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0x22EF4444),
+                  color: const Color(0xFFFEF2F2),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: const Color(0xFFEF4444).withValues(alpha: 0.4),
+                    color: const Color(0xFFFECACA),
                   ),
                 ),
                 child: Row(
@@ -197,8 +196,9 @@ class DocumentCard extends StatelessWidget {
                       child: Text(
                         document.rejectionReason!,
                         style: const TextStyle(
-                          color: Color(0xFFFCA5A5),
+                          color: Color(0xFFDC2626),
                           fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -208,7 +208,7 @@ class DocumentCard extends StatelessWidget {
             ),
 
           const SizedBox(height: 12),
-          const Divider(color: DriverColors.borderDark, height: 1),
+          const Divider(color: Color(0xFFF1F5F9), height: 1),
 
           // 4. Action Row (Upload / Preview / Replace)
           Padding(
@@ -221,7 +221,7 @@ class DocumentCard extends StatelessWidget {
                           children: [
                             const Icon(
                               Icons.attachment_rounded,
-                              color: DriverColors.primaryOrange,
+                              color: Color(0xFF64748B),
                               size: 16,
                             ),
                             const SizedBox(width: 6),
@@ -229,10 +229,10 @@ class DocumentCard extends StatelessWidget {
                               child: Text(
                                 document.uploadedFileName ??
                                     '${document.documentCode.toLowerCase()}_scan.pdf',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.8),
+                                style: const TextStyle(
+                                  color: Color(0xFF0F172A),
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.w600,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -240,8 +240,8 @@ class DocumentCard extends StatelessWidget {
                             const SizedBox(width: 6),
                             Text(
                               '(${document.uploadedFileSize ?? "2.1 MB"})',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.4),
+                              style: const TextStyle(
+                                color: Color(0xFF94A3B8),
                                 fontSize: 11,
                               ),
                             ),
@@ -259,7 +259,7 @@ class DocumentCard extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.08),
+                            color: const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Row(
@@ -267,16 +267,16 @@ class DocumentCard extends StatelessWidget {
                             children: [
                               Icon(
                                 Icons.visibility_outlined,
-                                color: Colors.white,
+                                color: Color(0xFF0F172A),
                                 size: 14,
                               ),
                               SizedBox(width: 4),
                               Text(
                                 'View',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: Color(0xFF0F172A),
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -294,25 +294,25 @@ class DocumentCard extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: DriverColors.primaryOrange
-                                .withValues(alpha: 0.15),
+                            color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFBFDBFE)),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.refresh_rounded,
-                                color: DriverColors.primaryOrange,
+                                color: Color(0xFF2563EB),
                                 size: 14,
                               ),
                               SizedBox(width: 4),
                               Text(
                                 'Replace',
                                 style: TextStyle(
-                                  color: DriverColors.primaryOrange,
+                                  color: Color(0xFF2563EB),
                                   fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -326,12 +326,12 @@ class DocumentCard extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: onUpload,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: DriverColors.primaryOrange,
+                        backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
-                        elevation: 2,
+                        elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       icon: const Icon(Icons.cloud_upload_outlined, size: 18),
@@ -339,7 +339,7 @@ class DocumentCard extends StatelessWidget {
                         'Upload Document',
                         style: TextStyle(
                           fontSize: 13.5,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
                           letterSpacing: 0.4,
                         ),
                       ),

@@ -101,7 +101,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DriverColors.bgDark,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -118,11 +118,15 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        gradient: DriverColors.driverGradient,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: DriverColors.primaryOrange.withValues(alpha: 0.4),
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.35),
                             blurRadius: 20,
                             offset: const Offset(0, 6),
                           ),
@@ -142,7 +146,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                     'ROACS DISPATCH',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: DriverColors.primaryOrange,
+                      color: Color(0xFF2563EB),
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 2.0,
@@ -153,17 +157,17 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                     'Driver Partner Portal',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFF0F172A),
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
+                  const Text(
                     'Sign in to access live customer tow requests',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: Color(0xFF64748B),
                       fontSize: 13,
                     ),
                   ),
@@ -173,12 +177,12 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
-                      color: DriverColors.cardDark,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: DriverColors.borderDark),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.4),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
@@ -191,7 +195,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                         const Text(
                           'DRIVER ID / EMAIL',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: Color(0xFF334155),
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.8,
@@ -200,24 +204,24 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                         const SizedBox(height: 8),
                         TextField(
                           controller: _idController,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
                           decoration: InputDecoration(
                             hintText: 'e.g. DRV-7701 or email',
-                            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                            prefixIcon: const Icon(Icons.badge_outlined, color: DriverColors.primaryOrange, size: 20),
+                            hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF2563EB), size: 20),
                             filled: true,
-                            fillColor: DriverColors.bgDark,
+                            fillColor: const Color(0xFFF8FAFC),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: DriverColors.borderDark),
+                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: DriverColors.borderDark),
+                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: DriverColors.primaryOrange, width: 1.5),
+                              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
                             ),
                           ),
                         ),
@@ -227,7 +231,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                         const Text(
                           'PASSWORD',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: Color(0xFF334155),
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.8,
@@ -237,15 +241,15 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                         TextField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
                           decoration: InputDecoration(
                             hintText: 'Enter your password',
-                            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                            prefixIcon: const Icon(Icons.lock_outline, color: DriverColors.primaryOrange, size: 20),
+                            hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF2563EB), size: 20),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                                color: Colors.white54,
+                                color: const Color(0xFF64748B),
                                 size: 20,
                               ),
                               onPressed: () {
@@ -253,18 +257,18 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                               },
                             ),
                             filled: true,
-                            fillColor: DriverColors.bgDark,
+                            fillColor: const Color(0xFFF8FAFC),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: DriverColors.borderDark),
+                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: DriverColors.borderDark),
+                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: DriverColors.primaryOrange, width: 1.5),
+                              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
                             ),
                           ),
                         ),
@@ -284,14 +288,14 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                                     onChanged: (val) {
                                       setState(() => _rememberMe = val ?? true);
                                     },
-                                    activeColor: DriverColors.primaryOrange,
+                                    activeColor: const Color(0xFF2563EB),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 const Text(
                                   'Remember me',
-                                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                                  style: TextStyle(color: Color(0xFF475569), fontSize: 12),
                                 ),
                               ],
                             ),
@@ -307,7 +311,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                               child: const Text(
                                 'Forgot password?',
                                 style: TextStyle(
-                                  color: DriverColors.primaryOrangeLight,
+                                  color: Color(0xFF2563EB),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -321,18 +325,18 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            color: DriverColors.enRouteAmber.withValues(alpha: 0.15),
+                            color: const Color(0xFFFEF3C7),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: DriverColors.enRouteAmber.withValues(alpha: 0.4)),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.flash_on_rounded, color: DriverColors.enRouteAmber, size: 16),
+                              const Icon(Icons.flash_on_rounded, color: Color(0xFFD97706), size: 16),
                               const SizedBox(width: 8),
                               const Expanded(
                                 child: Text(
-                                  'Demo Account: Marcus Vance (Ready)',
-                                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                                  'Demo: Marcus Vance (Ready)',
+                                  style: TextStyle(color: Color(0xFF92400E), fontSize: 12, fontWeight: FontWeight.w600),
                                 ),
                               ),
                               TextButton(
@@ -345,7 +349,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                                 child: const Text(
                                   'Re-fill',
                                   style: TextStyle(
-                                    color: DriverColors.enRouteAmber,
+                                    color: Color(0xFFB45309),
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -360,11 +364,11 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                         ElevatedButton(
                           onPressed: _isLoading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: DriverColors.primaryOrange,
+                            backgroundColor: const Color(0xFF2563EB),
                             foregroundColor: Colors.white,
                             minimumSize: const Size.fromHeight(52),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            elevation: 4,
+                            elevation: 2,
                           ),
                           child: _isLoading
                               ? const SizedBox(
@@ -393,9 +397,9 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
+                      const Text(
                         'New tow driver or fleet owner? ',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
+                        style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                       ),
                       GestureDetector(
                         onTap: () {
@@ -406,7 +410,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                         child: const Text(
                           'Join Fleet',
                           style: TextStyle(
-                            color: DriverColors.onlineGreen,
+                            color: Color(0xFF2563EB),
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                             decoration: TextDecoration.underline,

@@ -1523,7 +1523,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 children: [
                   _buildDrawerTile(
                     icon: Icons.person_outline,
-                    title: 'Driver Profile & Fleet Info',
+                    title: 'My Profile',
                     onTap: () {
                       Navigator.of(context).pop();
                       Navigator.of(context).push(

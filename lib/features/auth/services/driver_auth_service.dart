@@ -245,6 +245,30 @@ class DriverAuthService {
     return true;
   }
 
+  Future<void> updateProfile({
+    required String name,
+    required String phone,
+    required String email,
+    required String truckModel,
+    required String licensePlate,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefKeyDriverName, name);
+    await prefs.setString(_prefKeyDriverPhone, phone);
+    await prefs.setString(_prefKeyDriverEmail, email);
+    await prefs.setString(_prefKeyTruckModel, truckModel);
+    await prefs.setString(_prefKeyPlate, licensePlate);
+
+    final current = DriverJobService().driverNotifier.value;
+    DriverJobService().driverNotifier.value = current.copyWith(
+      name: name,
+      phone: phone,
+      email: email,
+      truckModel: truckModel,
+      licensePlate: licensePlate,
+    );
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefKeyLoggedIn, false);
