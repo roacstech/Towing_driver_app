@@ -35,14 +35,14 @@ class DocumentPreviewDialog extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(maxWidth: 420),
         decoration: BoxDecoration(
-          color: DriverColors.cardDark,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: DriverColors.borderDark),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.6),
-              blurRadius: 30,
-              offset: const Offset(0, 10),
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -57,7 +57,7 @@ class DocumentPreviewDialog extends StatelessWidget {
                 children: [
                   Icon(
                     document.icon,
-                    color: DriverColors.primaryOrange,
+                    color: const Color(0xFF2563EB),
                     size: 20,
                   ),
                   const SizedBox(width: 10),
@@ -65,7 +65,7 @@ class DocumentPreviewDialog extends StatelessWidget {
                     child: Text(
                       document.title,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFF0F172A),
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -74,14 +74,14 @@ class DocumentPreviewDialog extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                    icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
 
-            const Divider(color: DriverColors.borderDark, height: 1),
+            const Divider(color: Color(0xFFE2E8F0), height: 1),
 
             // Document Digital Display Area
             Padding(
@@ -266,16 +266,18 @@ class DocumentPreviewDialog extends StatelessWidget {
                 children: [
                   Text(
                     'Size: ${document.uploadedFileSize ?? "2.3 MB"}',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
                       fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  Text(
-                    'SHA-256 Checksum Verified',
+                  const Text(
+                    'SHA-256 Verified',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: Color(0xFF10B981),
                       fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -293,8 +295,8 @@ class DocumentPreviewDialog extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: DriverColors.borderDark),
+                        foregroundColor: const Color(0xFF334155),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -311,7 +313,7 @@ class DocumentPreviewDialog extends StatelessWidget {
                         onReplace();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: DriverColors.primaryOrange,
+                        backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(

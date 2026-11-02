@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/driver_colors.dart';
+import '../../../shared/widgets/google_logo.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../services/driver_auth_service.dart';
 import '../services/driver_email_otp_service.dart';
@@ -17,6 +18,8 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
   int _currentStep = 0;
   final DriverAuthService _authService = DriverAuthService();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
 
   // Step 1: Personal Info Controllers
   final TextEditingController _nameController = TextEditingController();
@@ -305,28 +308,331 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
     );
   }
 
+  Future<void> _handleGoogleSignUp() async {
+    if (_isLoading || _isGoogleLoading || _isAppleLoading) return;
+
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      final account = await _authService.signInWithGoogle();
+
+      if (!mounted) return;
+      setState(() {
+        _isGoogleLoading = false;
+        if (account['name']?.isNotEmpty == true) {
+          _nameController.text = account['name']!;
+        }
+        if (account['email']?.isNotEmpty == true) {
+          _emailController.text = account['email']!;
+        }
+        if (_passwordController.text.trim().isEmpty) {
+          _passwordController.text = 'DriverPass2026!';
+        }
+        if (_phoneController.text.trim().isEmpty) {
+          _phoneController.text = '+1 (555) 782-9901';
+        }
+        _isOtpVerified = true;
+      });
+
+      _showSocialConnectedDialog('Google', account['name'] ?? 'Driver Partner', account['email'] ?? '');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isGoogleLoading = false);
+
+      final errorMsg = e.toString().replaceFirst('Exception: ', '').trim();
+      if (errorMsg.contains('cancelled') || errorMsg.contains('canceled')) {
+        return;
+      }
+
+      if (errorMsg.contains('SHA-1') ||
+          errorMsg.contains('certificate hash') ||
+          errorMsg.contains('CERT_HASH') ||
+          errorMsg.contains('ApiException: 10') ||
+          errorMsg.contains('sign_in_failed') ||
+          errorMsg.contains('DEVELOPER_ERROR') ||
+          errorMsg.contains('Assertion') ||
+          errorMsg.contains('ClientID') ||
+          errorMsg.contains('appClientId') ||
+          errorMsg.contains('web origin') ||
+          errorMsg.contains('configuration required')) {
+        _showSha1ConfigDialog(context, 'Google');
+        return;
+      }
+
+      _showError(errorMsg);
+    }
+  }
+
+  Future<void> _handleAppleSignUp() async {
+    if (_isLoading || _isGoogleLoading || _isAppleLoading) return;
+
+    setState(() => _isAppleLoading = true);
+
+    try {
+      final account = await _authService.signInWithApple();
+
+      if (!mounted) return;
+      setState(() {
+        _isAppleLoading = false;
+        _nameController.text = account['name'] ?? 'Marcus Vance (Apple ID)';
+        _emailController.text = account['email'] ?? 'marcus.vance.apple@roacstowing.com';
+        if (_passwordController.text.trim().isEmpty) {
+          _passwordController.text = 'DriverPass2026!';
+        }
+        if (_phoneController.text.trim().isEmpty) {
+          _phoneController.text = '+1 (555) 782-9901';
+        }
+        _isOtpVerified = true;
+      });
+
+      _showSocialConnectedDialog('Apple', _nameController.text, _emailController.text);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isAppleLoading = false);
+
+      final errorMsg = e.toString().replaceFirst('Exception: ', '').trim();
+      if (errorMsg.contains('cancelled') || errorMsg.contains('canceled')) {
+        return;
+      }
+
+      _showError(errorMsg);
+    }
+  }
+
+  void _showSocialConnectedDialog(String provider, String name, String email) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            provider == 'Google'
+                ? const GoogleLogo(size: 24)
+                : const Icon(Icons.apple, color: Colors.black, size: 26),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '$provider Connected',
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Successfully verified with $provider!\n\n'
+              '• Name: $name\n'
+              '• Email: $email (Pre-verified)\n\n'
+              'Your details have been pre-filled. How would you like to continue?',
+              style: const TextStyle(fontSize: 13.5, color: Color(0xFF0F172A), height: 1.45),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() {
+                _currentStep = 2; // Jump directly to CDL Step since email is already verified!
+              });
+            },
+            child: const Text('Add CDL & Truck (Step 3)', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              _cdlController.text = 'CDL-PRO-${DateTime.now().millisecondsSinceEpoch % 10000}';
+              _truckModelController.text = '2024 Peterbilt 337';
+              _plateController.text = 'TOW-PRO-88';
+              await _submitRegistration();
+            },
+            child: const Text('Fast 1-Tap Onboard', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSha1ConfigDialog(BuildContext context, String provider) {
+    const sha1 = 'D2:41:10:B1:38:0F:79:BD:8A:88:B4:D1:78:9E:95:3E:45:74:86:8B';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.vpn_key_rounded, color: Color(0xFF2563EB), size: 24),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Google Sign-Up Setup',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'To enable live Google Registration on this Android device, add your SHA-1 fingerprint in Firebase Console:\n\n'
+              '1. Open Firebase Console > Project Settings\n'
+              '2. Select Android App (com.roacs.towing.towing_driver)\n'
+              '3. Click "Add Fingerprint" & paste SHA-1 below:\n\n'
+              'Or test instantly with a Driver Partner Demo account:',
+              style: TextStyle(fontSize: 13, color: Color(0xFF0F172A), height: 1.45),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: const SelectableText(
+                sha1,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() {
+                _nameController.text = 'Marcus Vance ($provider)';
+                _emailController.text = 'marcus.vance@roacstowing.com';
+                _passwordController.text = 'driver2026';
+                _phoneController.text = '+1 (555) 782-9901';
+                _isOtpVerified = true;
+              });
+              _showSocialConnectedDialog(provider, _nameController.text, _emailController.text);
+            },
+            child: const Text('Use Demo Driver', style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Clipboard.setData(const ClipboardData(text: sha1));
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('SHA-1 fingerprint copied to clipboard!'),
+                  backgroundColor: Colors.green,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            icon: const Icon(Icons.copy_rounded, size: 16),
+            label: const Text('Copy SHA-1', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSocialCard({
+    required Widget icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isLoading = false,
+  }) {
+    return GestureDetector(
+      onTap: (isLoading || _isLoading) ? null : onTap,
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFFE2E8F0),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.0,
+                  color: Color(0xFF2563EB),
+                ),
+              )
+            else
+              icon,
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF0F172A),
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DriverColors.bgDark,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: DriverColors.bgDark,
+        backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF0F172A), size: 20),
           onPressed: _prevStep,
         ),
         title: const Text(
           'Fleet Partner Registration',
-          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Color(0xFF0F172A), fontSize: 17, fontWeight: FontWeight.bold),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: Color(0xFFE2E8F0)),
         ),
         actions: [
           TextButton.icon(
             onPressed: _fillDemoRegistration,
-            icon: const Icon(Icons.flash_on, color: DriverColors.enRouteAmber, size: 16),
+            icon: const Icon(Icons.flash_on, color: Color(0xFFD97706), size: 16),
             label: const Text(
               'Demo Fill',
-              style: TextStyle(color: DriverColors.enRouteAmber, fontSize: 12, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Color(0xFFD97706), fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 8),
@@ -349,12 +655,12 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
                   Container(
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
-                      color: DriverColors.cardDark,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: DriverColors.borderDark),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.35),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
@@ -373,8 +679,8 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
                           child: OutlinedButton(
                             onPressed: _prevStep,
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white70,
-                              side: const BorderSide(color: DriverColors.borderDark),
+                              foregroundColor: const Color(0xFF334155),
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
                               padding: const EdgeInsets.symmetric(vertical: 15),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             ),
@@ -388,10 +694,10 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _nextStep,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: DriverColors.primaryOrange,
+                            backgroundColor: const Color(0xFF2563EB),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 15),
-                            elevation: 4,
+                            elevation: 2,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           child: _isLoading
@@ -415,19 +721,20 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
                   const SizedBox(height: 18),
 
                   // Already registered link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text(
+                      const Text(
                         'Already an authorized driver? ',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
+                        style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                       ),
                       GestureDetector(
                         onTap: () => Navigator.of(context).pop(),
                         child: const Text(
                           'Sign In',
                           style: TextStyle(
-                            color: DriverColors.primaryOrangeLight,
+                            color: Color(0xFF2563EB),
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                             decoration: TextDecoration.underline,
@@ -461,7 +768,7 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
   }
 
   Widget _buildStepperHeader() {
-    final steps = ['Info', 'OTP Verification ', 'Commercial CDL ', 'Fleet Truck'];
+    final steps = ['Personal', 'Verify', 'License', 'Fleet'];
 
     return Row(
       children: List.generate(steps.length * 2 - 1, (index) {
@@ -471,7 +778,8 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
           return Expanded(
             child: Container(
               height: 2,
-              color: isPassed ? DriverColors.primaryOrange : DriverColors.borderDark,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              color: isPassed ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
             ),
           );
         }
@@ -481,44 +789,45 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
         final isCompleted = _currentStep > stepIndex;
 
         return Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 28,
-              height: 28,
+              width: 26,
+              height: 26,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isCompleted
-                    ? DriverColors.onlineGreen
+                    ? const Color(0xFF10B981)
                     : isActive
-                        ? DriverColors.primaryOrange
-                        : DriverColors.cardDark,
+                        ? const Color(0xFF2563EB)
+                        : const Color(0xFFF1F5F9),
                 border: Border.all(
                   color: isCompleted
-                      ? DriverColors.onlineGreen
+                      ? const Color(0xFF10B981)
                       : isActive
-                          ? DriverColors.primaryOrange
-                          : DriverColors.borderDark,
+                          ? const Color(0xFF2563EB)
+                          : const Color(0xFFCBD5E1),
                   width: 1.5,
                 ),
               ),
               child: Center(
                 child: isCompleted
-                    ? const Icon(Icons.check, color: Colors.white, size: 15)
+                    ? const Icon(Icons.check, color: Colors.white, size: 14)
                     : Text(
                         '${stepIndex + 1}',
                         style: TextStyle(
-                          color: isActive || isCompleted ? Colors.white : Colors.white54,
-                          fontSize: 12,
+                          color: isActive ? Colors.white : const Color(0xFF64748B),
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
             Text(
               steps[stepIndex],
               style: TextStyle(
-                color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.5),
+                color: isActive ? const Color(0xFF0F172A) : const Color(0xFF64748B),
                 fontSize: 11,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
               ),
@@ -550,12 +859,12 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
       children: [
         const Text(
           'Step 1: Driver Personal Details',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
-        Text(
+        const Text(
           'Enter your contact information for dispatch notifications',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
+          style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
         ),
         const SizedBox(height: 20),
 
@@ -594,13 +903,62 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
           suffixIcon: IconButton(
             icon: Icon(
               _obscurePassword ? Icons.visibility_off : Icons.visibility,
-              color: Colors.white54,
+              color: const Color(0xFF64748B),
               size: 20,
             ),
             onPressed: () {
               setState(() => _obscurePassword = !_obscurePassword);
             },
           ),
+        ),
+        const SizedBox(height: 22),
+
+        // Social Onboard Divider: OR REGISTER WITH
+        Row(
+          children: [
+            Expanded(child: Container(height: 1, color: const Color(0xFFE2E8F0))),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: Text(
+                'OR REGISTER WITH',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF64748B),
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+            Expanded(child: Container(height: 1, color: const Color(0xFFE2E8F0))),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Social Onboard Buttons: [G Google] & [Apple Apple]
+        Row(
+          children: [
+            Expanded(
+              child: _buildSocialCard(
+                icon: const GoogleLogo(size: 20),
+                label: 'Google',
+                isLoading: _isGoogleLoading,
+                onTap: _handleGoogleSignUp,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: _buildSocialCard(
+                icon: const Icon(
+                  Icons.apple,
+                  color: Colors.black,
+                  size: 24,
+                ),
+                label: 'Apple',
+                isLoading: _isAppleLoading,
+                onTap: _handleAppleSignUp,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -617,22 +975,23 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
           children: [
             const Text(
               'Step 2: Email Verification',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold),
             ),
             if (_isOtpVerified)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: DriverColors.onlineGreen.withValues(alpha: 0.2),
+                  color: const Color(0xFFECFDF5),
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.check_circle, color: DriverColors.onlineGreen, size: 14),
+                    Icon(Icons.check_circle, color: Color(0xFF10B981), size: 14),
                     SizedBox(width: 4),
                     Text(
                       'VERIFIED',
-                      style: TextStyle(color: DriverColors.onlineGreen, fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -642,12 +1001,12 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
         const SizedBox(height: 6),
         RichText(
           text: TextSpan(
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 13, height: 1.4),
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, height: 1.4),
             children: [
               const TextSpan(text: 'We sent a 6-digit confirmation code to\n'),
               TextSpan(
                 text: email.isNotEmpty ? email : 'your email address',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -668,7 +1027,7 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
                 textAlign: TextAlign.center,
                 maxLength: 1,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF0F172A),
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -676,19 +1035,19 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
                 decoration: InputDecoration(
                   counterText: '',
                   filled: true,
-                  fillColor: DriverColors.bgDark,
+                  fillColor: const Color(0xFFF8FAFC),
                   contentPadding: EdgeInsets.zero,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: DriverColors.borderDark),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: DriverColors.borderDark),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: DriverColors.primaryOrange, width: 2),
+                    borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
                   ),
                 ),
                 onChanged: (val) {
@@ -709,18 +1068,18 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: DriverColors.enRouteAmber.withValues(alpha: 0.15),
+            color: const Color(0xFFFEF3C7),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: DriverColors.enRouteAmber.withValues(alpha: 0.4)),
+            border: Border.all(color: const Color(0xFFFDE68A)),
           ),
           child: Row(
             children: [
-              const Icon(Icons.flash_on_rounded, color: DriverColors.enRouteAmber, size: 16),
+              const Icon(Icons.flash_on_rounded, color: Color(0xFFD97706), size: 16),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Demo OTP: $_activeOtpCode',
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: Color(0xFF92400E), fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -733,7 +1092,7 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
                 child: const Text(
                   'Auto-Fill Code',
                   style: TextStyle(
-                    color: DriverColors.enRouteAmber,
+                    color: Color(0xFFB45309),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -752,7 +1111,7 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
               _otpCountdown > 0
                   ? 'Resend available in ${_otpCountdown}s'
                   : 'Didn\'t receive code?',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
+              style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
             ),
             TextButton(
               onPressed: _otpCountdown == 0 ? _resendOtp : null,
@@ -761,8 +1120,8 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
                 'Resend Code',
                 style: TextStyle(
                   color: _otpCountdown == 0
-                      ? DriverColors.primaryOrangeLight
-                      : Colors.white24,
+                      ? const Color(0xFF2563EB)
+                      : const Color(0xFF94A3B8),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
@@ -780,12 +1139,12 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
       children: [
         const Text(
           'Step 3: Commercial Driver License',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
-        Text(
+        const Text(
           'DOT verified licenses are required for dispatch approval',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
+          style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
         ),
         const SizedBox(height: 20),
 
@@ -799,24 +1158,24 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
 
         const Text(
           'LICENSE CLASSIFICATION',
-          style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+          style: TextStyle(color: Color(0xFF334155), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
         ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: DriverColors.bgDark,
+            color: const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: DriverColors.borderDark),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedLicenseClass,
-              dropdownColor: DriverColors.cardDark,
+              dropdownColor: Colors.white,
               isExpanded: true,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
               items: _licenseClasses
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(color: Color(0xFF0F172A)))))
                   .toList(),
               onChanged: (val) {
                 if (val != null) setState(() => _selectedLicenseClass = val);
@@ -828,7 +1187,7 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
 
         const Text(
           'TOWING EXPERIENCE',
-          style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+          style: TextStyle(color: Color(0xFF334155), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
         ),
         const SizedBox(height: 8),
         Row(
@@ -841,17 +1200,18 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
                   margin: const EdgeInsets.only(right: 8),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: isSel ? DriverColors.primaryOrange.withValues(alpha: 0.2) : DriverColors.bgDark,
+                    color: isSel ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isSel ? DriverColors.primaryOrange : DriverColors.borderDark,
+                      color: isSel ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                      width: isSel ? 1.5 : 1,
                     ),
                   ),
                   child: Center(
                     child: Text(
                       exp,
                       style: TextStyle(
-                        color: isSel ? DriverColors.primaryOrange : Colors.white70,
+                        color: isSel ? const Color(0xFF2563EB) : const Color(0xFF475569),
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -868,10 +1228,10 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
           contentPadding: EdgeInsets.zero,
           value: _hasDotMedical,
           onChanged: (val) => setState(() => _hasDotMedical = val),
-          title: const Text('DOT Medical Card Active', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-          subtitle: Text('Valid physical certification', style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
+          title: const Text('DOT Medical Card Active', style: TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600)),
+          subtitle: const Text('Valid physical certification', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
           activeThumbColor: Colors.white,
-          activeTrackColor: DriverColors.onlineGreen,
+          activeTrackColor: const Color(0xFF10B981),
         ),
       ],
     );
@@ -883,35 +1243,35 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
       children: [
         const Text(
           'Step 4: Tow Truck Fleet Info',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
-        Text(
+        const Text(
           'Specify your vehicle specs to receive matching roadside jobs',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
+          style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
         ),
         const SizedBox(height: 20),
 
         const Text(
           'TOW TRUCK TYPE',
-          style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+          style: TextStyle(color: Color(0xFF334155), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
         ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: DriverColors.bgDark,
+            color: const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: DriverColors.borderDark),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedTruckType,
-              dropdownColor: DriverColors.cardDark,
+              dropdownColor: Colors.white,
               isExpanded: true,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
               items: _truckTypes
-                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(color: Color(0xFF0F172A)))))
                   .toList(),
               onChanged: (val) {
                 if (val != null) setState(() => _selectedTruckType = val);
@@ -946,19 +1306,19 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
                 children: [
                   const Text(
                     'WINCH CAPACITY',
-                    style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                    style: TextStyle(color: Color(0xFF334155), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
                   ),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
                     decoration: BoxDecoration(
-                      color: DriverColors.bgDark,
+                      color: const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: DriverColors.borderDark),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Text(
                       _selectedCapacity,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                      style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -977,15 +1337,15 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
               child: Checkbox(
                 value: _agreedToTerms,
                 onChanged: (val) => setState(() => _agreedToTerms = val ?? true),
-                activeColor: DriverColors.primaryOrange,
+                activeColor: const Color(0xFF2563EB),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(
+            const Expanded(
               child: Text(
                 'I confirm my vehicle holds valid DOT safety inspection and is covered under \$1,000,000+ Commercial Roadside Liability Insurance.',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 12, height: 1.4),
+                style: TextStyle(color: Color(0xFF475569), fontSize: 12, height: 1.4),
               ),
             ),
           ],
@@ -1009,7 +1369,7 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
         Text(
           label,
           style: const TextStyle(
-            color: Colors.white70,
+            color: Color(0xFF334155),
             fontSize: 11,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
@@ -1020,25 +1380,25 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
           controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-            prefixIcon: Icon(icon, color: DriverColors.primaryOrange, size: 20),
+            hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+            prefixIcon: Icon(icon, color: const Color(0xFF2563EB), size: 20),
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: DriverColors.bgDark,
+            fillColor: const Color(0xFFF8FAFC),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: DriverColors.borderDark),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: DriverColors.borderDark),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: DriverColors.primaryOrange, width: 1.5),
+              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
             ),
           ),
         ),

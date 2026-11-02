@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../../core/constants/driver_colors.dart';
 import '../models/driver_document.dart';
 
 class UploadModalBottomSheet extends StatefulWidget {
@@ -87,11 +86,11 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: DriverColors.cardDark,
+        color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black54,
+            color: Color(0x18000000),
             blurRadius: 24,
             offset: Offset(0, -4),
           ),
@@ -111,7 +110,7 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
             width: 44,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: const Color(0xFFD1D5DB),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -124,15 +123,15 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: DriverColors.primaryOrange.withValues(alpha: 0.15),
+                  color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: DriverColors.primaryOrange.withValues(alpha: 0.3),
+                    color: const Color(0xFFBFDBFE),
                   ),
                 ),
                 child: Icon(
                   widget.document.icon,
-                  color: DriverColors.primaryOrange,
+                  color: const Color(0xFF2563EB),
                   size: 24,
                 ),
               ),
@@ -144,24 +143,25 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
                     Text(
                       widget.document.title,
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       'Document Code: ${widget.document.documentCode}',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.6),
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
                         fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
@@ -174,10 +174,10 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: DriverColors.bgDark,
+                color: const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: DriverColors.primaryOrange.withValues(alpha: 0.3),
+                  color: const Color(0xFFE2E8F0),
                 ),
               ),
               child: Column(
@@ -188,17 +188,17 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
                       Text(
                         _uploadStatus,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Color(0xFF0F172A),
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       Text(
                         '${(_uploadProgress * 100).toInt()}%',
                         style: const TextStyle(
-                          color: DriverColors.primaryOrange,
+                          color: Color(0xFF2563EB),
                           fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
@@ -209,17 +209,17 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
                     child: LinearProgressIndicator(
                       value: _uploadProgress.clamp(0.0, 1.0),
                       minHeight: 8,
-                      backgroundColor: Colors.white.withValues(alpha: 0.08),
+                      backgroundColor: const Color(0xFFE2E8F0),
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                        DriverColors.primaryOrange,
+                        Color(0xFF2563EB),
                       ),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
+                  const Text(
                     '256-Bit SSL Encrypted Fleet Upload',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.45),
+                      color: Color(0xFF94A3B8),
                       fontSize: 11,
                     ),
                   ),
@@ -232,25 +232,25 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F1B2E),
+                color: const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: DriverColors.borderDark),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.info_outline_rounded,
-                    color: Color(0xFF38BDF8),
+                    color: Color(0xFF2563EB),
                     size: 20,
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Ensure all 4 corners are visible with no glare. Formats: JPG, PNG, PDF (Max 15MB).',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Color(0xFF1E3A8A),
                         fontSize: 12,
-                        height: 1.3,
+                        height: 1.35,
                       ),
                     ),
                   ),
@@ -264,7 +264,7 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
               icon: Icons.camera_alt_rounded,
               title: 'Take Document Photo',
               subtitle: 'Capture directly using phone camera with smart edge guide',
-              color: DriverColors.primaryOrange,
+              color: const Color(0xFF2563EB),
               onTap: () => _simulateUpload('cam', 'jpg'),
             ),
             const SizedBox(height: 10),
@@ -274,7 +274,7 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
               icon: Icons.photo_library_rounded,
               title: 'Choose from Gallery',
               subtitle: 'Select existing clear photo from device photos',
-              color: const Color(0xFF38BDF8),
+              color: const Color(0xFF0284C7),
               onTap: () => _simulateUpload('gallery', 'png'),
             ),
             const SizedBox(height: 10),
@@ -306,16 +306,16 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: DriverColors.bgDark,
+          color: const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: DriverColors.borderDark),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 22),
@@ -328,16 +328,16 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
                   Text(
                     title,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFF0F172A),
                       fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.55),
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
                       fontSize: 11.5,
                       height: 1.25,
                     ),
@@ -346,9 +346,9 @@ class _UploadModalBottomSheetState extends State<UploadModalBottomSheet> {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
+            const Icon(
               Icons.chevron_right_rounded,
-              color: Colors.white.withValues(alpha: 0.4),
+              color: Color(0xFF94A3B8),
               size: 20,
             ),
           ],

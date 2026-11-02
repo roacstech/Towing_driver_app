@@ -1,3 +1,4 @@
+
 class DriverProfile {
   final String id;
   final String name;
@@ -10,6 +11,7 @@ class DriverProfile {
   final double todayEarnings;
   final bool isOnline;
   final bool isVerified;
+  final int monthsActive;
 
   const DriverProfile({
     required this.id,
@@ -23,6 +25,7 @@ class DriverProfile {
     required this.todayEarnings,
     required this.isOnline,
     required this.isVerified,
+    this.monthsActive = 5,
   });
 
   DriverProfile copyWith({
@@ -36,6 +39,7 @@ class DriverProfile {
     double? todayEarnings,
     bool? isOnline,
     bool? isVerified,
+    int? monthsActive,
   }) {
     return DriverProfile(
       id: id,
@@ -49,20 +53,22 @@ class DriverProfile {
       todayEarnings: todayEarnings ?? this.todayEarnings,
       isOnline: isOnline ?? this.isOnline,
       isVerified: isVerified ?? this.isVerified,
+      monthsActive: monthsActive ?? this.monthsActive,
     );
   }
 
   static DriverProfile mockDriver = const DriverProfile(
     id: 'DRV-7701',
-    name: 'Marcus Vance',
-    phone: '+1 (555) 782-9901',
-    email: 'marcus.vance@roacstowing.com',
+    name: 'YOGESHWARAN M',
+    phone: '+91 98765 43210',
+    email: 'yogeshwaran.m@roacstowing.com',
     truckModel: '2024 Peterbilt 337 Flatbed Heavy',
     licensePlate: 'TOW-PRO-88',
-    rating: 4.94,
-    totalTows: 284,
+    rating: 4.9,
+    totalTows: 546,
     todayEarnings: 345.50,
     isOnline: true,
     isVerified: true,
+    monthsActive: 5,
   );
 }
