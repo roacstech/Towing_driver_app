@@ -171,28 +171,182 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Clean Hero Vehicle Image
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-                child: Image.asset(
-                  job.vehicleImage,
-                  height: 135,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 135,
-                      width: double.infinity,
-                      color: const Color(0xFFF1F5F9),
-                      child: const Center(
-                        child: Icon(
-                          Icons.fire_truck_rounded,
-                          size: 48,
-                          color: Color(0xFF94A3B8),
+              // 1. Premium Vehicle Showroom Stage (Properly Padded & Centered)
+              Container(
+                height: 155,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFFF8FAFC),
+                      Color(0xFFEEF2F6),
+                    ],
+                  ),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Color(0xFFE2E8F0),
+                      width: 1.0,
+                    ),
+                  ),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Showroom Floor Soft Shadow
+                    Positioned(
+                      bottom: 12,
+                      child: Container(
+                        width: 200,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.all(Radius.elliptical(200, 14)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                              blurRadius: 16,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
                       ),
-                    );
-                  },
+                    ),
+
+                    // Centered Vehicle Image with Contain Fit
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      child: Center(
+                        child: Image.asset(
+                          job.vehicleImage,
+                          height: 125,
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.center,
+                          filterQuality: FilterQuality.high,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: const Color(0xFFF1F5F9),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.fire_truck_rounded,
+                                  size: 48,
+                                  color: Color(0xFF94A3B8),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    // Year & Category Pill (Top Left)
+                    Positioned(
+                      top: 10,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          '${job.vehicleYear} · ${job.vehicleCategory}',
+                          style: const TextStyle(
+                            color: Color(0xFF334155),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.1,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Urgent / Distance Pill (Top Right)
+                    if (job.isUrgent)
+                      Positioned(
+                        top: 10,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFEF4444).withValues(alpha: 0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.bolt_rounded, size: 13, color: Colors.white),
+                              SizedBox(width: 3),
+                              Text(
+                                'URGENT HAZARD',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      Positioned(
+                        top: 10,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.92),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.near_me_rounded,
+                                size: 12,
+                                color: Color(0xFF10B981),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${job.distanceToPickup} (${job.pickupEta})',
+                                style: const TextStyle(
+                                  color: Color(0xFF10B981),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
 
@@ -203,86 +357,59 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title, Distance & Payout Header Row
+                    // Title, Vehicle & Payout Header Row
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Left Column: Category Badge + Service Title + Distance & Vehicle
+                        // Left Column: Category Icon + Service Title + Vehicle Details
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF1E3A8A),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.directions_car_rounded,
+                              color: Colors.white,
+                              size: 17,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 28,
-                                    height: 28,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF1E3A8A),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.directions_car_rounded,
-                                        color: Colors.white,
-                                        size: 15,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 9),
-                                  Flexible(
-                                    child: Text(
-                                      job.requestType,
-                                      style: const TextStyle(
-                                        color: Color(0xFF0F172A),
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.3,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                job.requestType,
+                                style: const TextStyle(
+                                  color: Color(0xFF0F172A),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.3,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.near_me_rounded,
-                                    size: 14,
-                                    color: Color(0xFF10B981),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${job.distanceToPickup} • ${job.pickupEta}',
-                                    style: const TextStyle(
-                                      color: Color(0xFF334155),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      '• ${job.vehicleName}',
-                                      style: const TextStyle(
-                                        color: Color(0xFF64748B),
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
+                              const SizedBox(height: 2),
+                              Text(
+                                '${job.vehicleYear} ${job.vehicleName}',
+                                style: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 12),
 
-                        // Right Column: Price ($180) & Est. Earnings
+                        // Right Column: Price ($95) & Est. Earnings
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
@@ -293,13 +420,15 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
                                 fontSize: 28,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.6,
+                                height: 1.0,
                               ),
                             ),
+                            const SizedBox(height: 2),
                             const Text(
                               'Est. Earnings',
                               style: TextStyle(
                                 color: Color(0xFF64748B),
-                                fontSize: 11,
+                                fontSize: 10.5,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -309,107 +438,131 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
                     ),
                     const SizedBox(height: 14),
 
-                    // Pickup Address Row with dedicated badge
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 26,
-                          height: 26,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEFF6FF),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.location_on_rounded,
-                              color: Color(0xFF2563EB),
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    // Pickup & Dropoff Route Container
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        children: [
+                          // Pickup Address Row
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const Text(
-                                'PICKUP',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.6,
-                                  color: Color(0xFF94A3B8),
+                              Container(
+                                width: 22,
+                                height: 22,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFEFF6FF),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.location_on_rounded,
+                                    color: Color(0xFF2563EB),
+                                    size: 13,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 1),
-                              Text(
-                                job.pickupAddress,
-                                style: const TextStyle(
-                                  color: Color(0xFF1E293B),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.25,
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'PICKUP',
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.6,
+                                        color: Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                    Text(
+                                      job.pickupAddress,
+                                      style: const TextStyle(
+                                        color: Color(0xFF1E293B),
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
 
-                    // Dropoff Address Row with dedicated badge
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 26,
-                          height: 26,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFEF2F2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.location_on_rounded,
-                              color: Color(0xFFEF4444),
-                              size: 16,
+                          // Vertical route connector
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10, top: 2, bottom: 2),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 2,
+                                  height: 10,
+                                  color: const Color(0xFFCBD5E1),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+
+                          // Dropoff Address Row
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const Text(
-                                'DROPOFF',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.6,
-                                  color: Color(0xFF94A3B8),
+                              Container(
+                                width: 22,
+                                height: 22,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFFEF2F2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.location_on_rounded,
+                                    color: Color(0xFFEF4444),
+                                    size: 13,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 1),
-                              Text(
-                                job.dropAddress,
-                                style: const TextStyle(
-                                  color: Color(0xFF1E293B),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.25,
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'DROPOFF',
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.6,
+                                        color: Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                    Text(
+                                      job.dropAddress,
+                                      style: const TextStyle(
+                                        color: Color(0xFF1E293B),
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 14),
 
@@ -450,54 +603,39 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
                     // 3. Clean Polished Action Buttons (52px Height)
                     Row(
                       children: [
-                        // Clean Modern Pass Button (Flex 4)
-                        Expanded(
-                          flex: 4,
-                          child: SizedBox(
-                            height: 52,
-                            child: Material(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(26),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(26),
-                                splashColor: const Color(0xFFF1F5F9),
-                                highlightColor: const Color(0xFFF8FAFC),
-                                onTap: () => _commitSwipe(isAccept: false),
-                                child: Ink(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(26),
-                                    border: Border.all(
-                                      color: const Color(0xFFE2E8F0),
-                                      width: 1.5,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
+                        // Compact Icon-Only Pass Button (52x52)
+                        SizedBox(
+                          width: 52,
+                          height: 52,
+                          child: Material(
+                            color: Colors.white,
+                            shape: const CircleBorder(),
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              splashColor: const Color(0xFFF1F5F9),
+                              highlightColor: const Color(0xFFF8FAFC),
+                              onTap: () => _commitSwipe(isAccept: false),
+                              child: Ink(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xFFCBD5E1),
+                                    width: 1.5,
                                   ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.close_rounded,
-                                        color: Color(0xFF64748B),
-                                        size: 20,
-                                      ),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'Pass',
-                                        style: TextStyle(
-                                          color: Color(0xFF334155),
-                                          fontSize: 15.5,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: -0.2,
-                                        ),
-                                      ),
-                                    ],
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    color: Color(0xFF64748B),
+                                    size: 24,
                                   ),
                                 ),
                               ),
@@ -506,9 +644,8 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
                         ),
                         const SizedBox(width: 12),
 
-                        // Vibrant Emerald Accept Button (Flex 6)
+                        // Wide Prominent Accept Button (Expanded to fill remaining width)
                         Expanded(
-                          flex: 6,
                           child: SizedBox(
                             height: 52,
                             child: Material(
@@ -527,8 +664,8 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
                                     borderRadius: BorderRadius.circular(26),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                                        blurRadius: 12,
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.38),
+                                        blurRadius: 14,
                                         offset: const Offset(0, 4),
                                       ),
                                     ],
@@ -541,13 +678,14 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
                                         color: Colors.white,
                                         size: 22,
                                       ),
-                                      SizedBox(width: 7),
+                                      SizedBox(width: 8),
                                       Text(
                                         'Accept',
                                         style: TextStyle(
                                           color: Colors.white,
-                                          fontSize: 16,
+                                          fontSize: 16.5,
                                           fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.2,
                                         ),
                                       ),
                                     ],

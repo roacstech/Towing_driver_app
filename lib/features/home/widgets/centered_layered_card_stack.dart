@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../jobs/models/tow_job.dart';
 import 'swipeable_request_card.dart';
 
 class CenteredLayeredCardStack extends StatelessWidget {
   final List<TowJob> requests;
+  final bool isOnline;
+  final VoidCallback? onGoOnline;
   final Function(TowJob) onAccept;
   final Function(TowJob) onReject;
   final Function(TowJob) onTapJob;
@@ -12,6 +15,8 @@ class CenteredLayeredCardStack extends StatelessWidget {
   const CenteredLayeredCardStack({
     super.key,
     required this.requests,
+    this.isOnline = true,
+    this.onGoOnline,
     required this.onAccept,
     required this.onReject,
     required this.onTapJob,
@@ -20,6 +25,10 @@ class CenteredLayeredCardStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!isOnline) {
+      return _buildOfflineState();
+    }
+
     if (requests.isEmpty) {
       return _buildEmptyState();
     }
@@ -175,6 +184,114 @@ class CenteredLayeredCardStack extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOfflineState() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0C0B1527),
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+            ),
+            child: const Icon(
+              Icons.power_settings_new_rounded,
+              color: Color(0xFF64748B),
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            "You're Currently Offline",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Go online to receive nearby towing calls, roadside recoveries, and high-priority dispatch requests.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: Color(0xFF64748B),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 22),
+
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(25),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(25),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  onGoOnline?.call();
+                },
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF10B981), Color(0xFF059669)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.bolt_rounded, color: Colors.white, size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        'Go Online Now',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ],

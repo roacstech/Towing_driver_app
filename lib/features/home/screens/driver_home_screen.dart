@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/driver_colors.dart';
 import '../../jobs/models/tow_job.dart';
 import '../../jobs/screens/request_list_screen.dart';
 import '../../jobs/screens/trip_details_screen.dart';
 import '../../jobs/screens/active_job_screen.dart';
 import '../../jobs/services/driver_job_service.dart';
+import '../../profile/models/driver_profile.dart';
 import '../../profile/screens/driver_profile_screen.dart';
 import '../../earnings/screens/driver_earnings_screen.dart';
 import '../widgets/driver_map.dart';
@@ -44,6 +44,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _sheetController.removeListener(_onSheetSizeChanged);
     _sheetController.dispose();
     _sheetRatioNotifier.dispose();
+    _jobService.stopDispatchPolling();
     super.dispose();
   }
 
@@ -416,14 +417,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
               ),
+              const SizedBox(width: 4),
               Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
@@ -471,13 +477,15 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Nearby Calls in Queue (${requests.length - 1} more)',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
-                  letterSpacing: -0.2,
+              Expanded(
+                child: Text(
+                  'Nearby Calls in Queue (${requests.length - 1} more)',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: -0.2,
+                  ),
                 ),
               ),
               GestureDetector(
@@ -646,146 +654,162 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       key: _scaffoldKey,
       drawer: _buildDrawer(),
       backgroundColor: Colors.white,
-      body: ValueListenableBuilder<List<TowJob>>(
-        valueListenable: _jobService.availableRequestsNotifier,
-        builder: (context, requests, _) {
-          return ValueListenableBuilder<TowJob?>(
-            valueListenable: _jobService.selectedRequestNotifier,
-            builder: (context, selectedJob, _) {
-              final effectiveSelected =
-                  selectedJob ?? (requests.isNotEmpty ? requests.first : null);
+      body: ValueListenableBuilder<DriverProfile>(
+        valueListenable: _jobService.driverNotifier,
+        builder: (context, driver, _) {
+          final isOnline = driver.isOnline;
 
-              return Stack(
-                children: [
-                  // 1. Full Screen Interactive Map Layer
-                  ValueListenableBuilder<double>(
-                    valueListenable: _sheetRatioNotifier,
-                    builder: (context, ratio, _) {
-                      return Positioned.fill(
-                        child: DriverMap(
-                          requests: requests,
-                          selectedRequest: effectiveSelected,
-                          sheetRatio: ratio,
-                          onRequestSelected: (job) {
-                            _jobService.selectRequest(job);
-                          },
-                          onMenuPressed: () {
-                            _scaffoldKey.currentState?.openDrawer();
-                          },
-                          onExpandSheet: () {
-                            _sheetController.animateTo(
-                              0.42,
-                              duration: const Duration(milliseconds: 280),
-                              curve: Curves.easeOutCubic,
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ),
+          return ValueListenableBuilder<List<TowJob>>(
+            valueListenable: _jobService.availableRequestsNotifier,
+            builder: (context, requests, _) {
+              final visibleRequests = isOnline ? requests : const <TowJob>[];
 
-                  // 2. Buttery Smooth 120fps Sliding Driver Hub Sheet
-                  DraggableScrollableSheet(
-                    controller: _sheetController,
-                    initialChildSize: 0.42, // Exact 6:4 initial ratio (60% map, ~40% sheet)
-                    minChildSize: 0.08,    // Collapsed: map 100% full screen
-                    maxChildSize: 0.88,    // Expanded: full view with shift stats
-                    snap: true,
-                    snapSizes: const [0.08, 0.42, 0.88],
-                    builder: (context, scrollController) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(28),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF0F172A).withValues(alpha: 0.12),
-                              blurRadius: 24,
-                              offset: const Offset(0, -6),
+              return ValueListenableBuilder<TowJob?>(
+                valueListenable: _jobService.selectedRequestNotifier,
+                builder: (context, selectedJob, _) {
+                  final effectiveSelected = isOnline
+                      ? (selectedJob ?? (visibleRequests.isNotEmpty ? visibleRequests.first : null))
+                      : null;
+
+                  return Stack(
+                    children: [
+                      // 1. Full Screen Interactive Map Layer
+                      ValueListenableBuilder<double>(
+                        valueListenable: _sheetRatioNotifier,
+                        builder: (context, ratio, _) {
+                          return Positioned.fill(
+                            child: DriverMap(
+                              requests: visibleRequests,
+                              selectedRequest: effectiveSelected,
+                              sheetRatio: ratio,
+                              isOnline: isOnline,
+                              onToggleOnline: () {
+                                _jobService.toggleOnlineStatus(!isOnline);
+                              },
+                              onRequestSelected: (job) {
+                                _jobService.selectRequest(job);
+                              },
+                              onMenuPressed: () {
+                                _scaffoldKey.currentState?.openDrawer();
+                              },
+                              onExpandSheet: () {
+                                _sheetController.animateTo(
+                                  0.42,
+                                  duration: const Duration(milliseconds: 280),
+                                  curve: Curves.easeOutCubic,
+                                );
+                              },
                             ),
-                          ],
-                        ),
-                        child: CustomScrollView(
-                          controller: scrollController,
-                          physics: const BouncingScrollPhysics(),
-                          slivers: [
-                            SliverToBoxAdapter(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Top Drag Handle Pill
-                                  const SizedBox(height: 10),
-                                  Center(
-                                    child: Container(
-                                      width: 44,
-                                      height: 4.5,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFCBD5E1),
-                                        borderRadius: BorderRadius.circular(3),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
+                          );
+                        },
+                      ),
 
-                                  // The Cards (Clean, Spacious Dispatch Card Stack)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    child: CenteredLayeredCardStack(
-                                      requests: requests,
-                                      onAccept: _handleAcceptJob,
-                                      onReject: _handleRejectJob,
-                                      onTapJob: _handleOpenTripDetails,
-                                      onResetDemo: () => _jobService.resetDemoRequests(),
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 16),
-
-                                  // Scroll Down Affordance
-                                  const Center(
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.keyboard_arrow_down_rounded,
-                                          size: 16,
-                                          color: Color(0xFF94A3B8),
-                                        ),
-                                        SizedBox(width: 4),
-                                        Text(
-                                          'Scroll down for Shift Stats & Queue',
-                                          style: TextStyle(
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF94A3B8),
+                      // 2. Buttery Smooth 120fps Sliding Driver Hub Sheet
+                      DraggableScrollableSheet(
+                        controller: _sheetController,
+                        initialChildSize: 0.42, // Exact 6:4 initial ratio (60% map, ~40% sheet)
+                        minChildSize: 0.08,    // Collapsed: map 100% full screen
+                        maxChildSize: 0.88,    // Expanded: full view with shift stats
+                        snap: true,
+                        snapSizes: const [0.08, 0.42, 0.88],
+                        builder: (context, scrollController) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(28),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0F172A).withValues(alpha: 0.12),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, -6),
+                                ),
+                              ],
+                            ),
+                            child: CustomScrollView(
+                              controller: scrollController,
+                              physics: const BouncingScrollPhysics(),
+                              slivers: [
+                                SliverToBoxAdapter(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Top Drag Handle Pill
+                                      const SizedBox(height: 10),
+                                      Center(
+                                        child: Container(
+                                          width: 44,
+                                          height: 4.5,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFCBD5E1),
+                                            borderRadius: BorderRadius.circular(3),
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      const SizedBox(height: 12),
+
+                                      // The Cards (Clean, Spacious Dispatch Card Stack with Online Check)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                                        child: CenteredLayeredCardStack(
+                                          requests: visibleRequests,
+                                          isOnline: isOnline,
+                                          onGoOnline: () => _jobService.toggleOnlineStatus(true),
+                                          onAccept: _handleAcceptJob,
+                                          onReject: _handleRejectJob,
+                                          onTapJob: _handleOpenTripDetails,
+                                          onResetDemo: () => _jobService.resetDemoRequests(),
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 16),
+
+                                      // Scroll Down Affordance
+                                      const Center(
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.keyboard_arrow_down_rounded,
+                                              size: 16,
+                                              color: Color(0xFF94A3B8),
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Shift Stats & Queue',
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF94A3B8),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 14),
+
+                                      // RELATED INFORMATION SECTION:
+                                      // A) Today's Shift Performance & Earnings Summary
+                                      _buildPerformanceSection(),
+
+                                      // B) Nearby Dispatches in Queue (Only shown when online)
+                                      if (isOnline && requests.length > 1) _buildQueueSection(requests),
+
+                                      // C) Carrier & Equipment Checklist
+                                      _buildCarrierStatusCard(),
+                                    ],
                                   ),
-                                  const SizedBox(height: 14),
-
-                                  // RELATED INFORMATION SECTION:
-                                  // A) Today's Shift Performance & Earnings Summary
-                                  _buildPerformanceSection(),
-
-                                  // B) Nearby Dispatches in Queue
-                                  if (requests.length > 1) _buildQueueSection(requests),
-
-                                  // C) Carrier & Equipment Checklist
-                                  _buildCarrierStatusCard(),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                          );
+                        },
+                      ),
+                    ],
+                  );
+                },
               );
             },
           );

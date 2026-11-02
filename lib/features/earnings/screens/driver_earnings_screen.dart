@@ -3,12 +3,158 @@ import '../../../core/constants/driver_colors.dart';
 import '../../jobs/services/driver_job_service.dart';
 import '../../jobs/models/tow_job.dart';
 
-class DriverEarningsScreen extends StatelessWidget {
+class DailyPerformance {
+  final String dayName;
+  final String fullDayName;
+  final String dateString;
+  final double amount;
+  final int completedTows;
+  final double onlineHours;
+  final double rating;
+
+  const DailyPerformance({
+    required this.dayName,
+    required this.fullDayName,
+    required this.dateString,
+    required this.amount,
+    required this.completedTows,
+    required this.onlineHours,
+    required this.rating,
+  });
+
+  String get amountFormatted => '\$${amount.toInt()}';
+  String get fullAmountFormatted => '\$${amount.toStringAsFixed(2)}';
+  String get avgPerTowFormatted {
+    if (completedTows == 0) return '\$0.00';
+    return '\$${(amount / completedTows).toStringAsFixed(2)}';
+  }
+}
+
+class WeeklyData {
+  final String dateRange;
+  final List<DailyPerformance> days;
+
+  const WeeklyData({
+    required this.dateRange,
+    required this.days,
+  });
+
+  double get totalEarnings => days.fold(0.0, (sum, d) => sum + d.amount);
+  int get totalTows => days.fold(0, (sum, d) => sum + d.completedTows);
+  double get totalHours => days.fold(0.0, (sum, d) => sum + d.onlineHours);
+  double get maxAmount => days.fold(1.0, (max, d) => d.amount > max ? d.amount : max);
+}
+
+class DriverEarningsScreen extends StatefulWidget {
   const DriverEarningsScreen({super.key});
 
   @override
+  State<DriverEarningsScreen> createState() => _DriverEarningsScreenState();
+}
+
+class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
+  final DriverJobService _jobService = DriverJobService();
+
+  final List<WeeklyData> _weeks = const [
+    WeeklyData(
+      dateRange: 'Oct 09 - Oct 15',
+      days: [
+        DailyPerformance(dayName: 'Mon', fullDayName: 'Monday', dateString: 'Oct 09', amount: 180, completedTows: 3, onlineHours: 4.5, rating: 4.90),
+        DailyPerformance(dayName: 'Tue', fullDayName: 'Tuesday', dateString: 'Oct 10', amount: 260, completedTows: 5, onlineHours: 6.0, rating: 4.92),
+        DailyPerformance(dayName: 'Wed', fullDayName: 'Wednesday', dateString: 'Oct 11', amount: 320, completedTows: 6, onlineHours: 7.2, rating: 4.95),
+        DailyPerformance(dayName: 'Thu', fullDayName: 'Thursday', dateString: 'Oct 12', amount: 210, completedTows: 4, onlineHours: 5.0, rating: 4.91),
+        DailyPerformance(dayName: 'Fri', fullDayName: 'Friday', dateString: 'Oct 13', amount: 330, completedTows: 6, onlineHours: 7.0, rating: 4.98),
+        DailyPerformance(dayName: 'Sat', fullDayName: 'Saturday', dateString: 'Oct 14', amount: 395, completedTows: 7, onlineHours: 8.2, rating: 4.96),
+        DailyPerformance(dayName: 'Sun', fullDayName: 'Sunday', dateString: 'Oct 15', amount: 145, completedTows: 2, onlineHours: 3.5, rating: 5.00),
+      ],
+    ),
+    WeeklyData(
+      dateRange: 'Oct 16 - Oct 22',
+      days: [
+        DailyPerformance(dayName: 'Mon', fullDayName: 'Monday', dateString: 'Oct 16', amount: 240, completedTows: 4, onlineHours: 5.5, rating: 4.93),
+        DailyPerformance(dayName: 'Tue', fullDayName: 'Tuesday', dateString: 'Oct 17', amount: 310, completedTows: 6, onlineHours: 6.8, rating: 4.96),
+        DailyPerformance(dayName: 'Wed', fullDayName: 'Wednesday', dateString: 'Oct 18', amount: 290, completedTows: 5, onlineHours: 6.2, rating: 4.94),
+        DailyPerformance(dayName: 'Thu', fullDayName: 'Thursday', dateString: 'Oct 19', amount: 220, completedTows: 4, onlineHours: 5.2, rating: 4.92),
+        DailyPerformance(dayName: 'Fri', fullDayName: 'Friday', dateString: 'Oct 20', amount: 385, completedTows: 7, onlineHours: 8.0, rating: 4.97),
+        DailyPerformance(dayName: 'Sat', fullDayName: 'Saturday', dateString: 'Oct 21', amount: 450, completedTows: 9, onlineHours: 9.2, rating: 4.98),
+        DailyPerformance(dayName: 'Sun', fullDayName: 'Sunday', dateString: 'Oct 22', amount: 160, completedTows: 3, onlineHours: 4.0, rating: 4.95),
+      ],
+    ),
+    WeeklyData(
+      dateRange: 'Oct 23 - Oct 29',
+      days: [
+        DailyPerformance(dayName: 'Mon', fullDayName: 'Monday', dateString: 'Oct 23', amount: 210, completedTows: 4, onlineHours: 5.0, rating: 4.94),
+        DailyPerformance(dayName: 'Tue', fullDayName: 'Tuesday', dateString: 'Oct 24', amount: 280, completedTows: 5, onlineHours: 6.2, rating: 4.95),
+        DailyPerformance(dayName: 'Wed', fullDayName: 'Wednesday', dateString: 'Oct 25', amount: 360, completedTows: 7, onlineHours: 7.8, rating: 4.97),
+        DailyPerformance(dayName: 'Thu', fullDayName: 'Thursday', dateString: 'Oct 26', amount: 190, completedTows: 3, onlineHours: 4.5, rating: 4.90),
+        DailyPerformance(dayName: 'Fri', fullDayName: 'Friday', dateString: 'Oct 27', amount: 340, completedTows: 6, onlineHours: 7.0, rating: 4.96),
+        DailyPerformance(dayName: 'Sat', fullDayName: 'Saturday', dateString: 'Oct 28', amount: 415, completedTows: 8, onlineHours: 8.5, rating: 4.98),
+        DailyPerformance(dayName: 'Sun', fullDayName: 'Sunday', dateString: 'Oct 29', amount: 120, completedTows: 2, onlineHours: 3.2, rating: 4.92),
+      ],
+    ),
+    WeeklyData(
+      dateRange: 'Oct 30 - Nov 05',
+      days: [
+        DailyPerformance(dayName: 'Mon', fullDayName: 'Monday', dateString: 'Oct 30', amount: 235, completedTows: 4, onlineHours: 5.2, rating: 4.95),
+        DailyPerformance(dayName: 'Tue', fullDayName: 'Tuesday', dateString: 'Oct 31', amount: 290, completedTows: 5, onlineHours: 6.5, rating: 4.96),
+        DailyPerformance(dayName: 'Wed', fullDayName: 'Wednesday', dateString: 'Nov 01', amount: 345, completedTows: 6, onlineHours: 7.4, rating: 4.93),
+        DailyPerformance(dayName: 'Thu', fullDayName: 'Thursday', dateString: 'Nov 02', amount: 205, completedTows: 4, onlineHours: 4.8, rating: 4.91),
+        DailyPerformance(dayName: 'Fri', fullDayName: 'Friday', dateString: 'Nov 03', amount: 370, completedTows: 7, onlineHours: 7.8, rating: 4.98),
+        DailyPerformance(dayName: 'Sat', fullDayName: 'Saturday', dateString: 'Nov 04', amount: 425, completedTows: 8, onlineHours: 8.7, rating: 4.97),
+        DailyPerformance(dayName: 'Sun', fullDayName: 'Sunday', dateString: 'Nov 05', amount: 130, completedTows: 2, onlineHours: 3.1, rating: 4.94),
+      ],
+    ),
+  ];
+
+  // Default to Week 2 ('Oct 23 - Oct 29') and Saturday (index 5)
+  int _selectedWeekIndex = 2;
+  int _selectedDayIndex = 5;
+
+  void _goToPreviousWeek() {
+    if (_selectedWeekIndex > 0) {
+      setState(() {
+        _selectedWeekIndex--;
+      });
+    }
+  }
+
+  void _goToNextWeek() {
+    if (_selectedWeekIndex < _weeks.length - 1) {
+      setState(() {
+        _selectedWeekIndex++;
+      });
+    }
+  }
+
+  void _goToPreviousDay() {
+    setState(() {
+      if (_selectedDayIndex > 0) {
+        _selectedDayIndex--;
+      } else if (_selectedWeekIndex > 0) {
+        _selectedWeekIndex--;
+        _selectedDayIndex = 6;
+      }
+    });
+  }
+
+  void _goToNextDay() {
+    setState(() {
+      if (_selectedDayIndex < 6) {
+        _selectedDayIndex++;
+      } else if (_selectedWeekIndex < _weeks.length - 1) {
+        _selectedWeekIndex++;
+        _selectedDayIndex = 0;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final jobService = DriverJobService();
+    final currentWeek = _weeks[_selectedWeekIndex];
+    final selectedDay = currentWeek.days[_selectedDayIndex];
+
+    final canGoPrevDay = _selectedDayIndex > 0 || _selectedWeekIndex > 0;
+    final canGoNextDay = _selectedDayIndex < 6 || _selectedWeekIndex < _weeks.length - 1;
 
     return Scaffold(
       backgroundColor: DriverColors.scaffoldBg,
@@ -41,7 +187,7 @@ class DriverEarningsScreen extends StatelessWidget {
           children: [
             // 1. Primary Today Balance Card
             ValueListenableBuilder(
-              valueListenable: jobService.driverNotifier,
+              valueListenable: _jobService.driverNotifier,
               builder: (context, driver, _) {
                 return Container(
                   width: double.infinity,
@@ -109,9 +255,9 @@ class DriverEarningsScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildStatItem('Completed Tows', '${driver.totalTows} trips'),
-                          _buildStatItem('Driver Rating', '${driver.rating.toStringAsFixed(2)} ★'),
-                          _buildStatItem('Weekly Total', '\$1,845.00'),
+                          Expanded(child: _buildStatItem('Completed Tows', '${driver.totalTows} trips')),
+                          Expanded(child: _buildStatItem('Driver Rating', '${driver.rating.toStringAsFixed(2)} ★')),
+                          Expanded(child: _buildStatItem('Weekly Total', '\$${currentWeek.totalEarnings.toStringAsFixed(2)}')),
                         ],
                       ),
                     ],
@@ -122,7 +268,7 @@ class DriverEarningsScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // 2. Weekly Activity Chart Bar Mock
+            // 2. Interactive Weekly Performance Card with Day-Wise Inspection
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -134,39 +280,290 @@ class DriverEarningsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  // Header Row with Title and Previous/Next Week Selector
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Weekly Performance',
-                        style: TextStyle(
-                          color: DriverColors.textNavy,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
+                      const Expanded(
+                        child: Text(
+                          'Weekly Performance',
+                          style: TextStyle(
+                            color: DriverColors.textNavy,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Text(
-                        'Oct 23 - Oct 29',
-                        style: TextStyle(
-                          color: DriverColors.textSecondary,
-                          fontSize: 12,
+                      const SizedBox(width: 8),
+
+                      // Week Stepper (Prev / Next week)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: DriverColors.surfaceSubtle,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: DriverColors.surfaceBorderLight),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: _selectedWeekIndex > 0 ? _goToPreviousWeek : null,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Icon(
+                                    Icons.chevron_left_rounded,
+                                    size: 18,
+                                    color: _selectedWeekIndex > 0
+                                        ? DriverColors.textNavy
+                                        : DriverColors.textMuted.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Text(
+                                currentWeek.dateRange,
+                                style: const TextStyle(
+                                  color: DriverColors.textNavy,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: _selectedWeekIndex < _weeks.length - 1 ? _goToNextWeek : null,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 18,
+                                    color: _selectedWeekIndex < _weeks.length - 1
+                                        ? DriverColors.textNavy
+                                        : DriverColors.textMuted.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
+
+                  // 7-Day Performance Bar Chart
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.end,
+                    children: List.generate(currentWeek.days.length, (index) {
+                      final dayData = currentWeek.days[index];
+                      final isSelected = index == _selectedDayIndex;
+                      return Expanded(
+                        child: _buildDayBar(
+                          dayData,
+                          currentWeek.maxAmount,
+                          isSelected,
+                          () {
+                            setState(() {
+                              _selectedDayIndex = index;
+                            });
+                          },
+                        ),
+                      );
+                    }),
+                  ),
+
+                  const SizedBox(height: 16),
+                  const Divider(height: 1, color: DriverColors.surfaceBorderLight),
+                  const SizedBox(height: 14),
+
+                  // Day-Wise Detailed Performance Section with Day Navigation
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildDayBar('Mon', 0.5, '\$210'),
-                      _buildDayBar('Tue', 0.7, '\$280'),
-                      _buildDayBar('Wed', 0.9, '\$360'),
-                      _buildDayBar('Thu', 0.45, '\$190'),
-                      _buildDayBar('Fri', 0.85, '\$340'),
-                      _buildDayBar('Sat', 1.0, '\$415', isToday: true),
-                      _buildDayBar('Sun', 0.3, '\$120'),
+                      // Prev Day Button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: canGoPrevDay ? _goToPreviousDay : null,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: canGoPrevDay
+                                  ? DriverColors.surfaceSubtle
+                                  : DriverColors.surfaceSubtle.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: DriverColors.surfaceBorderLight),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.chevron_left_rounded,
+                                  size: 16,
+                                  color: canGoPrevDay
+                                      ? DriverColors.textNavy
+                                      : DriverColors.textMuted,
+                                ),
+                                const SizedBox(width: 1),
+                                Text(
+                                  'Prev',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: canGoPrevDay
+                                        ? DriverColors.textNavy
+                                        : DriverColors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+
+                      // Day & Date Title
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: DriverColors.electricBlue,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                '${selectedDay.fullDayName}, ${selectedDay.dateString}',
+                                style: const TextStyle(
+                                  color: DriverColors.textNavy,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.2,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+
+                      // Next Day Button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: canGoNextDay ? _goToNextDay : null,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: canGoNextDay
+                                  ? DriverColors.surfaceSubtle
+                                  : DriverColors.surfaceSubtle.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: DriverColors.surfaceBorderLight),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Next',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: canGoNextDay
+                                        ? DriverColors.textNavy
+                                        : DriverColors.textMuted,
+                                  ),
+                                ),
+                                const SizedBox(width: 1),
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 16,
+                                  color: canGoNextDay
+                                      ? DriverColors.textNavy
+                                      : DriverColors.textMuted,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // 4-Card Day Metric Strip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: DriverColors.surfaceBorderLight),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetricItem(
+                            icon: Icons.account_balance_wallet_rounded,
+                            iconColor: DriverColors.emeraldDark,
+                            iconBg: DriverColors.greenTint,
+                            label: 'Day Revenue',
+                            value: selectedDay.fullAmountFormatted,
+                          ),
+                        ),
+                        Container(width: 1, height: 32, color: DriverColors.surfaceBorder),
+                        Expanded(
+                          child: _buildMetricItem(
+                            icon: Icons.fire_truck_rounded,
+                            iconColor: DriverColors.electricBlue,
+                            iconBg: DriverColors.blueTint,
+                            label: 'Completed',
+                            value: '${selectedDay.completedTows} tows',
+                          ),
+                        ),
+                        Container(width: 1, height: 32, color: DriverColors.surfaceBorder),
+                        Expanded(
+                          child: _buildMetricItem(
+                            icon: Icons.timer_outlined,
+                            iconColor: const Color(0xFFD97706),
+                            iconBg: const Color(0xFFFEF3C7),
+                            label: 'Online Time',
+                            value: '${selectedDay.onlineHours} hrs',
+                          ),
+                        ),
+                        Container(width: 1, height: 32, color: DriverColors.surfaceBorder),
+                        Expanded(
+                          child: _buildMetricItem(
+                            icon: Icons.analytics_outlined,
+                            iconColor: const Color(0xFF7C3AED),
+                            iconBg: const Color(0xFFF3E8FF),
+                            label: 'Avg / Tow',
+                            value: selectedDay.avgPerTowFormatted,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -186,7 +583,7 @@ class DriverEarningsScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             ValueListenableBuilder<List<TowJob>>(
-              valueListenable: jobService.completedJobsNotifier,
+              valueListenable: _jobService.completedJobsNotifier,
               builder: (context, completed, _) {
                 if (completed.isEmpty) {
                   return Container(
@@ -300,37 +697,122 @@ class DriverEarningsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDayBar(String day, double heightPct, String amount, {bool isToday = false}) {
-    return Column(
-      children: [
-        Text(
-          amount,
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w700,
-            color: isToday ? DriverColors.electricBlue : DriverColors.textSecondary,
+  Widget _buildDayBar(
+    DailyPerformance dayData,
+    double maxAmount,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
+    final heightPct = (dayData.amount / maxAmount).clamp(0.2, 1.0);
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        children: [
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 200),
+            style: TextStyle(
+              fontSize: isSelected ? 10 : 9,
+              fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+              color: isSelected ? DriverColors.electricBlue : DriverColors.textSecondary,
+            ),
+            child: Text(dayData.amountFormatted),
           ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          width: 22,
-          height: 80 * heightPct,
-          decoration: BoxDecoration(
-            color: isToday ? DriverColors.electricBlue : DriverColors.surfaceSubtle,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: isToday ? DriverColors.electricBlue : DriverColors.surfaceBorder,
+          const SizedBox(height: 5),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            width: 24,
+            height: 82 * heightPct,
+            decoration: BoxDecoration(
+              gradient: isSelected
+                  ? const LinearGradient(
+                      colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    )
+                  : null,
+              color: isSelected ? null : DriverColors.surfaceSubtle,
+              borderRadius: BorderRadius.circular(7),
+              border: Border.all(
+                color: isSelected ? const Color(0xFF1D4ED8) : DriverColors.surfaceBorder,
+                width: isSelected ? 1.5 : 1.0,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
             ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          day,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
-            color: isToday ? DriverColors.textNavy : DriverColors.textSecondary,
+          const SizedBox(height: 6),
+          Text(
+            dayData.dayName,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+              color: isSelected ? DriverColors.textNavy : DriverColors.textSecondary,
+            ),
           ),
+          const SizedBox(height: 3),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: isSelected ? 4 : 0,
+            height: isSelected ? 4 : 0,
+            decoration: const BoxDecoration(
+              color: DriverColors.electricBlue,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricItem({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: iconBg,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: iconColor, size: 14),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: DriverColors.textNavy,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w800,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 1),
+        Text(
+          label,
+          style: const TextStyle(
+            color: DriverColors.textSecondary,
+            fontSize: 9.5,
+            fontWeight: FontWeight.w600,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

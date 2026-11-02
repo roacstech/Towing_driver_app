@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/screens/driver_login_screen.dart';
 import 'features/auth/services/driver_auth_service.dart';
-import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/navigation/screens/driver_main_shell.dart';
 import 'features/splash/screens/splash_screen.dart';
 

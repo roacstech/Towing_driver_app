@@ -36,6 +36,7 @@ class DriverJobService {
   List<TowJob> get completedJobs => completedJobsNotifier.value;
 
   Timer? _pollingTimer;
+  Timer? _initialCheckTimer;
 
   Future<void> init() async {
     try {
@@ -85,7 +86,8 @@ class DriverJobService {
     });
 
     if (activeJob == null) {
-      Future.delayed(const Duration(seconds: 2), () {
+      _initialCheckTimer?.cancel();
+      _initialCheckTimer = Timer(const Duration(seconds: 2), () {
         checkBackendForPendingJobs();
       });
     }
@@ -94,6 +96,8 @@ class DriverJobService {
   void stopDispatchPolling() {
     _pollingTimer?.cancel();
     _pollingTimer = null;
+    _initialCheckTimer?.cancel();
+    _initialCheckTimer = null;
   }
 
   /// Checks shared PostgreSQL / REST backend for new tows created by Customer App

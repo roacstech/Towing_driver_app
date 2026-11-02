@@ -190,6 +190,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final towJob = TowJob(
       id: request.id,
       serviceTitle: request.serviceReason,
+      requestType: request.serviceReason,
       vehicleName: request.vehicleName,
       licensePlate: '7XTR921',
       pickupAddress: request.pickupAddress,

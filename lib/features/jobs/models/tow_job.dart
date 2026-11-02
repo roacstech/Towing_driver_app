@@ -302,7 +302,7 @@ class TowJob {
       vehicleModel: 'F-150',
       vehicleCategory: 'Pickup',
       licensePlate: 'MD-8492',
-      vehicleImage: 'assets/services/vehicle_transport_banner.png',
+      vehicleImage: 'assets/vehicles/ford-f150.png',
       pickupAddress: '7800 Georgia Ave, Silver Spring, MD',
       dropAddress: '4521 Lee Hwy, Arlington, VA',
       pickupLat: 38.9877,

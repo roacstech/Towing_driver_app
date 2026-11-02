@@ -3,10 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' hide Path;
-import '../../../core/constants/driver_colors.dart';
 import '../../jobs/models/tow_job.dart';
-import '../../jobs/services/driver_job_service.dart';
-import '../../profile/models/driver_profile.dart';
 
 class DriverMap extends StatefulWidget {
   final List<TowJob> requests;
@@ -16,6 +13,8 @@ class DriverMap extends StatefulWidget {
   final VoidCallback? onNotificationsPressed;
   final VoidCallback? onExpandSheet;
   final double sheetRatio;
+  final bool isOnline;
+  final VoidCallback? onToggleOnline;
 
   const DriverMap({
     super.key,
@@ -26,6 +25,8 @@ class DriverMap extends StatefulWidget {
     this.onNotificationsPressed,
     this.onExpandSheet,
     this.sheetRatio = 0.40,
+    this.isOnline = true,
+    this.onToggleOnline,
   });
 
   @override
@@ -60,10 +61,8 @@ class _DriverMapState extends State<DriverMap> {
         if (permission == LocationPermission.whileInUse ||
             permission == LocationPermission.always) {
           final pos = await Geolocator.getLastKnownPosition() ??
-              await Geolocator.getCurrentPosition(
-                timeLimit: const Duration(seconds: 3),
-              );
-          if (pos != null && mounted) {
+              await Geolocator.getCurrentPosition();
+          if (mounted) {
             setState(() {
               _currentDriverLocation = LatLng(pos.latitude, pos.longitude);
             });
@@ -113,18 +112,6 @@ class _DriverMapState extends State<DriverMap> {
     final target = LatLng(driverLoc.latitude - latOffset, driverLoc.longitude);
     try {
       _mapController.move(target, 13.0);
-    } catch (_) {}
-  }
-
-  void _recenterMap(TowJob job) {
-    try {
-      final pickup = LatLng(job.pickupLat, job.pickupLng);
-      final drop = LatLng(job.dropLat, job.dropLng);
-      final ratioShift = widget.sheetRatio / 2.0;
-      final latOffset = ratioShift * 0.055;
-      final centerLat = (pickup.latitude + drop.latitude) / 2 - latOffset;
-      final centerLng = (pickup.longitude + drop.longitude) / 2;
-      _mapController.move(LatLng(centerLat, centerLng), 12.6);
     } catch (_) {}
   }
 
@@ -381,6 +368,120 @@ class _DriverMapState extends State<DriverMap> {
                       color: Color(0xFF1E293B),
                       size: 22,
                     ),
+                  ),
+                ),
+              ),
+
+              // Center: Interactive Online / Offline Badge with Animated Toggle Switch
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  widget.onToggleOnline?.call();
+                },
+                onHorizontalDragEnd: (details) {
+                  final velocity = details.primaryVelocity ?? 0;
+                  if (velocity > 60 && !widget.isOnline) {
+                    // Swiped right -> go online
+                    HapticFeedback.mediumImpact();
+                    widget.onToggleOnline?.call();
+                  } else if (velocity < -60 && widget.isOnline) {
+                    // Swiped left -> go offline
+                    HapticFeedback.mediumImpact();
+                    widget.onToggleOnline?.call();
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: const Color(0xFF0F172A),
+                      width: 1.3,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Status Label (Clean text, no dot, matching reference images)
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 280),
+                        curve: Curves.easeInOutCubic,
+                        style: TextStyle(
+                          color: widget.isOnline
+                              ? const Color(0xFF006837)
+                              : const Color(0xFF0F172A),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.6,
+                        ),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                          },
+                          child: Text(
+                            widget.isOnline ? 'ON DUTY' : 'OFF DUTY',
+                            key: ValueKey<bool>(widget.isOnline),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+
+                      // Smooth Switch matching Images 2 & 3
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 280),
+                        curve: Curves.easeInOutCubic,
+                        width: 46,
+                        height: 25,
+                        padding: const EdgeInsets.all(2.5),
+                        decoration: BoxDecoration(
+                          color: widget.isOnline
+                              ? const Color(0xFFD1FAE5)
+                              : const Color(0xFFA0ABC0),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: AnimatedAlign(
+                          duration: const Duration(milliseconds: 280),
+                          curve: Curves.easeInOutCubic,
+                          alignment: widget.isOnline
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 280),
+                            curve: Curves.easeInOutCubic,
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: widget.isOnline
+                                  ? const Color(0xFF00873E)
+                                  : Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
