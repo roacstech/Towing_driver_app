@@ -4,18 +4,19 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/screens/driver_login_screen.dart';
 import 'features/auth/services/driver_auth_service.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
+import 'features/navigation/screens/driver_main_shell.dart';
 import 'features/splash/screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Dark navigation bar and status bar style
+  // Premium Light Theme system bars: crisp white navigation and dark status icons
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF0B1320),
-      systemNavigationBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
 
@@ -34,17 +35,17 @@ class TowingDriverApp extends StatelessWidget {
       title: 'Roacs Towing - Driver Partner',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme(context),
-      darkTheme: AppTheme.darkTheme(context),
-      themeMode: ThemeMode.dark, // Driver apps default to sleek, high-contrast dark mode
+      darkTheme: AppTheme.lightTheme(context),
+      themeMode: ThemeMode.light,
       routes: {
-        '/dashboard': (_) => const DashboardScreen(),
+        '/dashboard': (_) => const DriverMainShell(),
         '/login': (_) => const DriverLoginScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/dashboard') {
           return MaterialPageRoute(
             settings: settings,
-            builder: (_) => const DashboardScreen(),
+            builder: (_) => const DriverMainShell(),
           );
         }
         if (settings.name == '/login') {
@@ -59,7 +60,7 @@ class TowingDriverApp extends StatelessWidget {
         valueListenable: DriverAuthService().isLoggedInNotifier,
         builder: (context, isLoggedIn, _) {
           return SplashScreen(
-            nextScreen: isLoggedIn ? const DashboardScreen() : const DriverLoginScreen(),
+            nextScreen: isLoggedIn ? const DriverMainShell() : const DriverLoginScreen(),
           );
         },
       ),
