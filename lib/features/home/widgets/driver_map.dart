@@ -1,9 +1,11 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import '../../jobs/models/tow_job.dart';
+import '../../jobs/services/driver_job_service.dart';
 
 class DriverMap extends StatefulWidget {
   final List<TowJob> requests;
@@ -40,14 +42,24 @@ class _DriverMapState extends State<DriverMap> {
   @override
   void initState() {
     super.initState();
-    _currentDriverLocation = _getDefaultDriverLocation();
+    _currentDriverLocation = DriverJobService().driverLocationNotifier.value;
+    DriverJobService().driverLocationNotifier.addListener(_onDriverLocationUpdated);
     _fetchDriverLocation();
   }
 
   @override
   void dispose() {
+    DriverJobService().driverLocationNotifier.removeListener(_onDriverLocationUpdated);
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _onDriverLocationUpdated() {
+    if (mounted) {
+      setState(() {
+        _currentDriverLocation = DriverJobService().driverLocationNotifier.value;
+      });
+    }
   }
 
   Future<void> _fetchDriverLocation() async {
@@ -63,8 +75,10 @@ class _DriverMapState extends State<DriverMap> {
           final pos = await Geolocator.getLastKnownPosition() ??
               await Geolocator.getCurrentPosition();
           if (mounted) {
+            final freshLoc = LatLng(pos.latitude, pos.longitude);
+            DriverJobService().driverLocationNotifier.value = freshLoc;
             setState(() {
-              _currentDriverLocation = LatLng(pos.latitude, pos.longitude);
+              _currentDriverLocation = freshLoc;
             });
             _centerOnDriverLocation();
             return;
@@ -75,8 +89,9 @@ class _DriverMapState extends State<DriverMap> {
 
     // Fallback: Default realistic location for current job
     if (mounted) {
+      final fallbackLoc = DriverJobService().driverLocationNotifier.value;
       setState(() {
-        _currentDriverLocation = _getDefaultDriverLocation();
+        _currentDriverLocation = fallbackLoc;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _centerOnDriverLocation();
@@ -85,12 +100,7 @@ class _DriverMapState extends State<DriverMap> {
   }
 
   LatLng _getDefaultDriverLocation() {
-    final job = widget.selectedRequest;
-    if (job != null) {
-      // Driver position placed ~1.5 miles from pickup
-      return LatLng(job.pickupLat - 0.009, job.pickupLng - 0.007);
-    }
-    return const LatLng(11.1389, 77.0325);
+    return DriverJobService().driverLocationNotifier.value;
   }
 
   @override
@@ -121,32 +131,47 @@ class _DriverMapState extends State<DriverMap> {
     final pLng = job.pickupLng;
     final pickup = LatLng(pLat, pLng);
 
-    // If driverLoc is far from pickup (> 150 miles), anchor driver locally
-    LatLng effectiveDriverLoc = driverLoc;
-    if (const Distance().as(LengthUnit.Mile, effectiveDriverLoc, pickup) > 150) {
-      effectiveDriverLoc = LatLng(pLat - 0.009, pLng - 0.007);
+    final isArrivedOrTowing = job.status == JobStatus.arrived || job.status == JobStatus.towing;
+    if (!isArrivedOrTowing) {
+      // Prior to driver arriving at pickup scene, show path from driver to customer pickup
+      final distToPickup = const Distance().as(LengthUnit.Mile, driverLoc, pickup);
+      if (distToPickup < 0.05) {
+        // Driver is already at the pickup spot: no driving path needed!
+        return <LatLng>[];
+      }
+
+      // If driver is unreasonably far (> 150 miles), do not draw a cross-country line
+      if (distToPickup > 150) {
+        return <LatLng>[];
+      }
+
+      final dLat = pickup.latitude - driverLoc.latitude;
+      final dLng = pickup.longitude - driverLoc.longitude;
+      final dist = sqrt(dLat * dLat + dLng * dLng);
+      final lateral = min(dist * 0.06, 0.0006);
+      final midLat = (driverLoc.latitude + pickup.latitude) / 2;
+      final midLng = (driverLoc.longitude + pickup.longitude) / 2;
+      final p1 = LatLng(midLat - (dLng / dist) * lateral, midLng + (dLat / dist) * lateral);
+
+      return [driverLoc, p1, pickup];
     }
 
-    // If drop is far from pickup (> 250 miles), anchor drop locally
-    LatLng drop = LatLng(job.dropLat, job.dropLng);
-    if (const Distance().as(LengthUnit.Mile, pickup, drop) > 250) {
-      drop = LatLng(pLat + 0.015, pLng + 0.012);
+    // After driver arrives at scene: show path from pickup to dropoff destination
+    final drop = LatLng(job.dropLat, job.dropLng);
+    final distDrop = const Distance().as(LengthUnit.Mile, pickup, drop);
+    if (distDrop < 0.05 || distDrop > 250) {
+      return <LatLng>[];
     }
 
-    // Default route points with slight curvature from driver to pickup and drop
-    final midPickupLat = (effectiveDriverLoc.latitude + pickup.latitude) / 2 + 0.003;
-    final midPickupLng = (effectiveDriverLoc.longitude + pickup.longitude) / 2 - 0.003;
+    final dLat = drop.latitude - pickup.latitude;
+    final dLng = drop.longitude - pickup.longitude;
+    final dist = sqrt(dLat * dLat + dLng * dLng);
+    final lateral = min(dist * 0.06, 0.0006);
+    final midLat = (pickup.latitude + drop.latitude) / 2;
+    final midLng = (pickup.longitude + drop.longitude) / 2;
+    final p1 = LatLng(midLat - (dLng / dist) * lateral, midLng + (dLat / dist) * lateral);
 
-    final midDropLat = (pickup.latitude + drop.latitude) / 2 + 0.004;
-    final midDropLng = (pickup.longitude + drop.longitude) / 2 - 0.004;
-
-    return [
-      effectiveDriverLoc,
-      LatLng(midPickupLat, midPickupLng),
-      pickup,
-      LatLng(midDropLat, midDropLng),
-      drop,
-    ];
+    return [pickup, p1, drop];
   }
 
   @override
@@ -185,7 +210,7 @@ class _DriverMapState extends State<DriverMap> {
                 ),
 
                 // 2. Route Polyline connecting Origin to Destination
-                if (routePoints.isNotEmpty)
+                if (routePoints.length >= 2)
                   PolylineLayer(
                     polylines: [
                       // Outer soft glow shadow
@@ -203,128 +228,213 @@ class _DriverMapState extends State<DriverMap> {
                     ],
                   ),
 
-                // 3. Markers: Driver Location, Blue Origin Circle & Red Destination Pin
+                // 3. Markers: Driver Current Location Pin, Origin/Pickup Pin & Destination Pin
                 MarkerLayer(
                   markers: [
-                    // Driver Current Location Marker (Pulse ring + white ring + navigation arrow)
+                    // Driver Current Location Marker (Pill badge + radar pulse + white ring + navigation dot)
                     Marker(
                       point: driverPos,
-                      width: 52,
-                      height: 52,
+                      width: 140,
+                      height: 72,
                       alignment: Alignment.center,
-                      child: Stack(
-                        alignment: Alignment.center,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Outer translucent radar pulse aura
                           Container(
-                            width: 46,
-                            height: 46,
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB).withValues(alpha: 0.18),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          // Crisp white boundary
-                          Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
+                              color: const Color(0xFF0F172A),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: const [
                                 BoxShadow(
-                                  color: const Color(0xFF2563EB).withValues(alpha: 0.35),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                                  color: Colors.black26,
+                                  blurRadius: 6,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.my_location_rounded, size: 11, color: Color(0xFF2563EB)),
+                                SizedBox(width: 4),
+                                Text(
+                                  'My Location',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.2,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          // Core blue driver navigation dot
-                          Container(
-                            width: 18,
-                            height: 18,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF2563EB),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.navigation_rounded,
-                                color: Colors.white,
-                                size: 11,
+                          const SizedBox(height: 3),
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB).withValues(alpha: 0.20),
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                            ),
+                              Container(
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                width: 14,
+                                height: 14,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF2563EB),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Center(
+                                  child: Icon(Icons.navigation_rounded, color: Colors.white, size: 9),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
 
-                    // Origin Blue Dot Marker
+                    // Origin / Customer Pickup Marker
                     if (pickupPos != null)
                       Marker(
                         point: pickupPos,
-                        width: 32,
-                        height: 32,
+                        width: 140,
+                        height: 72,
                         alignment: Alignment.center,
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2563EB),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 3.5),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    // Destination Red Pin Marker
-                    if (dropPos != null)
-                      Marker(
-                        point: dropPos,
-                        width: 38,
-                        height: 44,
-                        alignment: Alignment.topCenter,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.location_on_rounded,
-                                  color: Color(0xFFEF4444),
-                                  size: 38,
-                                ),
-                                Positioned(
-                                  top: 9,
-                                  child: Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: const BoxDecoration(
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 6,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.person_pin_circle_rounded, size: 11, color: Colors.white),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Pickup',
+                                    style: TextStyle(
                                       color: Colors.white,
-                                      shape: BoxShape.circle,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.2,
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Center(
+                                child: Icon(Icons.circle, color: Colors.white, size: 6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Destination Marker (ONLY after driver arrives at scene or towing)
+                    if (dropPos != null && (selectedJob?.status == JobStatus.arrived || selectedJob?.status == JobStatus.towing))
+                      Marker(
+                        point: dropPos,
+                        width: 140,
+                        height: 72,
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF059669),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 6,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.flag_rounded, size: 11, color: Colors.white),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Dropoff',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Container(
+                              width: 26,
+                              height: 26,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF059669),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(Icons.flag_rounded, color: Colors.white, size: 14),
                             ),
                           ],
                         ),

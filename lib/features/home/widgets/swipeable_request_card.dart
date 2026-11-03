@@ -131,9 +131,9 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
   Widget build(BuildContext context) {
     final job = widget.job;
 
-    // Smooth 3D translation and slight tilt rotation for active card
     final transform = Matrix4.identity()
       ..setEntry(3, 2, 0.001)
+      // ignore: deprecated_member_use
       ..translate(_dragOffset, 0.0)
       ..rotateZ(_dragOffset * 0.0005);
 
@@ -417,9 +417,9 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
                           children: [
                             Text(
                               job.payoutWhole,
-                              style: const TextStyle(
-                                color: Color(0xFF10B981),
-                                fontSize: 28,
+                              style: TextStyle(
+                                color: const Color(0xFF10B981),
+                                fontSize: job.payoutWhole.length > 5 ? 22 : 28,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.6,
                                 height: 1.0,

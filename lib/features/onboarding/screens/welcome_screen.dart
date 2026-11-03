@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../dashboard/screens/dashboard_screen.dart';
+import '../../navigation/screens/driver_main_shell.dart';
 
 class DriverWelcomeScreen extends StatefulWidget {
   const DriverWelcomeScreen({super.key});
@@ -32,7 +32,7 @@ class _DriverWelcomeScreenState extends State<DriverWelcomeScreen> {
       PageRouteBuilder(
         settings: const RouteSettings(name: '/dashboard'),
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const DashboardScreen(),
+            const DriverMainShell(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },

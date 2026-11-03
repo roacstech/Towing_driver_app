@@ -33,6 +33,9 @@ class DriverAuthService {
       final savedTruck = prefs.getString(_prefKeyTruckModel) ?? '2024 Peterbilt 337 Flatbed Heavy';
       final savedPlate = prefs.getString(_prefKeyPlate) ?? 'TOW-PRO-88';
 
+      final savedTotalTows = prefs.getInt('driver_total_tows') ?? 0;
+      final savedEarnings = prefs.getDouble('driver_today_earnings') ?? 0.0;
+
       DriverJobService().driverNotifier.value = DriverProfile(
         id: 'DRV-7701',
         name: savedName,
@@ -41,8 +44,8 @@ class DriverAuthService {
         truckModel: savedTruck,
         licensePlate: savedPlate,
         rating: 4.95,
-        totalTows: 312,
-        todayEarnings: 345.50,
+        totalTows: savedTotalTows,
+        todayEarnings: savedEarnings,
         isOnline: true,
         isVerified: true,
       );
@@ -103,12 +106,10 @@ class DriverAuthService {
       debugPrint('ℹ️ PostgreSQL backend offline or remote sync skipped: $e');
     }
 
-    // 3. Fallback for demo driver accounts
+    // 3. Fallback for demo driver accounts only if explicitly demo
     final isDemoAccount = cleanId == 'drv-7701' ||
         cleanId == 'marcus.vance@roacstowing.com' ||
-        cleanId.contains('marcus') ||
-        cleanId.contains('driver') ||
-        cleanId.contains('roacs');
+        cleanId == 'marcus';
 
     if (isDemoAccount) {
       driverName = 'Marcus Vance';
@@ -268,6 +269,23 @@ class DriverAuthService {
       truckModel: truckModel,
       licensePlate: licensePlate,
     );
+
+    // Sync updated driver partner details to PostgreSQL backend
+    try {
+      final body = {
+        'name': name.trim(),
+        'phone': phone.trim(),
+        'email': email.trim(),
+        'truck_model': truckModel.trim(),
+        'license_plate': licensePlate.trim(),
+        'role': 'driver',
+      };
+      await http.post(
+        Uri.parse(ApiConfig.usersEndpoint),
+        headers: {'content-type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 
   /// Sign in or onboard Driver Partner with Google

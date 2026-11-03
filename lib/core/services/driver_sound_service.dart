@@ -9,11 +9,9 @@ class DriverSoundService {
   static AudioPlayer? _player;
 
   static AudioPlayer get _audioPlayer {
-    if (_player == null) {
-      _player = AudioPlayer()
-        ..setReleaseMode(ReleaseMode.stop)
-        ..setPlayerMode(PlayerMode.lowLatency);
-    }
+    _player ??= AudioPlayer()
+      ..setReleaseMode(ReleaseMode.stop)
+      ..setPlayerMode(PlayerMode.lowLatency);
     return _player!;
   }
 

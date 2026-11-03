@@ -508,6 +508,49 @@ class TripDetailsScreen extends StatelessWidget {
                               ),
                               MarkerLayer(
                                 markers: [
+                                  // Driver Current Location Pin
+                                  Marker(
+                                    point: DriverJobService().driverLocationNotifier.value,
+                                    width: 100,
+                                    height: 48,
+                                    alignment: Alignment.center,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF0F172A),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.my_location_rounded, size: 9, color: Color(0xFF2563EB)),
+                                              SizedBox(width: 3),
+                                              Text(
+                                                'My Location',
+                                                style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 1),
+                                        Container(
+                                          width: 18,
+                                          height: 18,
+                                          decoration: BoxDecoration(
+                                            color: DriverColors.electricBlue,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white, width: 2),
+                                          ),
+                                          child: const Center(
+                                            child: Icon(Icons.navigation_rounded, color: Colors.white, size: 9),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                   Marker(
                                     point: pickupPos,
                                     width: 24,

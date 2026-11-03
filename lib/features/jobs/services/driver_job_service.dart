@@ -30,6 +30,14 @@ class DriverJobService {
   final ValueNotifier<List<TowJob>> completedJobsNotifier =
       ValueNotifier<List<TowJob>>([]);
 
+  // Emits when a customer cancels an active or dispatched job
+  final ValueNotifier<TowJob?> customerCancelledJobNotifier =
+      ValueNotifier<TowJob?>(null);
+
+  void clearCustomerCancellation() {
+    customerCancelledJobNotifier.value = null;
+  }
+
   // Driver live location notifier (defaults to Coimbatore hub: 11.1389, 77.0325)
   final ValueNotifier<LatLng> driverLocationNotifier =
       ValueNotifier<LatLng>(const LatLng(11.1389, 77.0325));
@@ -46,22 +54,35 @@ class DriverJobService {
   Timer? _pollingTimer;
   Timer? _initialCheckTimer;
   Timer? _activeTrackingTimer;
+  final Set<String> _cancelledJobIds = <String>{};
 
   Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final isOnline = prefs.getBool('driver_is_online') ?? true;
-      driverNotifier.value = driver.copyWith(isOnline: isOnline);
+      final savedName = prefs.getString('driver_saved_name');
+      final savedPhone = prefs.getString('driver_saved_phone');
+      final savedTruck = prefs.getString('driver_saved_truck');
+      final savedPlate = prefs.getString('driver_saved_plate');
+      final savedEarnings = prefs.getDouble('driver_today_earnings');
+      final savedTows = prefs.getInt('driver_total_tows');
+
+      driverNotifier.value = driver.copyWith(
+        name: (savedName != null && savedName.trim().isNotEmpty) ? savedName.trim() : driver.name,
+        phone: (savedPhone != null && savedPhone.trim().isNotEmpty) ? savedPhone.trim() : driver.phone,
+        truckModel: (savedTruck != null && savedTruck.trim().isNotEmpty) ? savedTruck.trim() : driver.truckModel,
+        licensePlate: (savedPlate != null && savedPlate.trim().isNotEmpty) ? savedPlate.trim() : driver.licensePlate,
+        todayEarnings: savedEarnings ?? driver.todayEarnings,
+        totalTows: savedTows ?? driver.totalTows,
+        isOnline: isOnline,
+      );
     } catch (_) {}
 
     await updateDriverGpsLocation();
 
-    // Ensure selected request defaults to first available
-    if (availableRequests.isNotEmpty) {
-      selectedRequestNotifier.value = availableRequests.first;
-    } else {
-      selectedRequestNotifier.value = null;
-    }
+    // Ensure requests start strictly empty (no mock or stale data)
+    availableRequestsNotifier.value = [];
+    selectedRequestNotifier.value = null;
 
     if (driver.isOnline) {
       startDispatchPolling();
@@ -180,37 +201,64 @@ class DriverJobService {
       } catch (_) {}
 
       if (rawJobsList.isNotEmpty) {
-        final activeOrPending = rawJobsList
+        final now = DateTime.now();
+        final allJobs = rawJobsList
             .map((j) => TowJob.fromJson(j as Map<String, dynamic>))
-            .where((t) => t.status == JobStatus.pending || t.status == JobStatus.accepted)
             .toList();
 
-        if (activeOrPending.isNotEmpty) {
-          // Merge into available if not already present
-          final current = List<TowJob>.from(availableRequestsNotifier.value);
-          bool hasChange = false;
-          for (final incoming in activeOrPending) {
-            final idx = current.indexWhere((e) => e.id == incoming.id);
-            if (idx == -1) {
-              // New incoming customer request! Place at top of queue
-              current.insert(0, incoming);
-              hasChange = true;
-            } else {
-              // Update customer live location if updated
-              if (current[idx].effectiveCustomerLat != incoming.effectiveCustomerLat ||
-                  current[idx].effectiveCustomerLng != incoming.effectiveCustomerLng) {
-                current[idx] = incoming;
-                hasChange = true;
-              }
-            }
-          }
-          if (hasChange) {
-            availableRequestsNotifier.value = current;
-            if (selectedRequest == null && current.isNotEmpty) {
-              selectedRequestNotifier.value = current.first;
-            }
+        // Check if an active job was cancelled by the customer in backend
+        if (activeJob != null) {
+          final current = activeJob!;
+          final cancelledMatch = allJobs.cast<TowJob?>().firstWhere(
+            (j) => j != null &&
+                (j.id == current.id ||
+                    j.id.replaceAll('#', '') == current.id.replaceAll('#', '')) &&
+                (j.status == JobStatus.cancelled),
+            orElse: () => null,
+          );
+          if (cancelledMatch != null) {
+            _activeTrackingTimer?.cancel();
+            _activeTrackingTimer = null;
+            _cancelledJobIds.add(current.id);
+            _cancelledJobIds.add(current.id.replaceAll('#', '').trim());
+
+            final cancelledJob = cancelledMatch.copyWith(
+              status: JobStatus.cancelled,
+              customerName: cancelledMatch.customerName.isNotEmpty
+                  ? cancelledMatch.customerName
+                  : current.customerName,
+              vehicleName: cancelledMatch.vehicleName.isNotEmpty
+                  ? cancelledMatch.vehicleName
+                  : current.vehicleName,
+            );
+            customerCancelledJobNotifier.value = cancelledJob;
+            activeJobNotifier.value = null;
           }
         }
+
+        // Only show truly pending / unassigned customer dispatches created recently (within last 60 mins)
+        final pendingJobs = allJobs.where((t) {
+          final isPending = t.status == JobStatus.pending;
+          final isUnassigned = t.driverName == null || t.driverName!.trim().isEmpty;
+          final notCurrentActive = activeJob == null || activeJob!.id != t.id;
+          final notCompleted = !completedJobsNotifier.value.any((c) => c.id == t.id);
+          final notCancelled = !_cancelledJobIds.contains(t.id);
+          final isRecent = now.difference(t.createdAt).inMinutes.abs() < 60;
+          return isPending && isUnassigned && notCurrentActive && notCompleted && notCancelled && isRecent;
+        }).toList();
+
+        availableRequestsNotifier.value = pendingJobs;
+        if (pendingJobs.isNotEmpty) {
+          if (selectedRequest == null || !pendingJobs.any((p) => p.id == selectedRequest?.id)) {
+            selectedRequestNotifier.value = pendingJobs.first;
+          }
+        } else {
+          selectedRequestNotifier.value = null;
+        }
+      } else {
+        // Backend has 0 pending requests: ensure no stale cards or cached jobs are displayed
+        availableRequestsNotifier.value = [];
+        selectedRequestNotifier.value = null;
       }
     } catch (_) {
       // Backend is offline or network error
@@ -290,6 +338,23 @@ class DriverJobService {
           }),
         ).timeout(const Duration(seconds: 4));
       }
+
+      // Ensure active driver's identity is registered on backend
+      try {
+        final regUri = Uri.parse(ApiConfig.usersEndpoint);
+        await http.post(
+          regUri,
+          headers: {'content-type': 'application/json'},
+          body: jsonEncode({
+            'name': driver.name,
+            'email': driver.email,
+            'phone': driver.phone,
+            'role': 'driver',
+            'truck_model': driver.truckModel,
+            'license_plate': driver.licensePlate,
+          }),
+        ).timeout(const Duration(seconds: 3));
+      } catch (_) {}
     } catch (_) {}
 
     // Start live tracking synchronization loop
@@ -299,11 +364,12 @@ class DriverJobService {
   /// Live tracking loop: broadcasts driver's real-time GPS and retrieves customer's live GPS
   void _startActiveJobTracking(String jobId) {
     _activeTrackingTimer?.cancel();
-    final safeJobId = Uri.encodeComponent(jobId.trim());
+    final cleanJobId = jobId.replaceAll('#', '').trim();
+    final safeJobId = Uri.encodeComponent(cleanJobId.isNotEmpty ? cleanJobId : jobId.trim());
 
     _activeTrackingTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
       final current = activeJob;
-      if (current == null || current.id != jobId) {
+      if (current == null || (current.id != jobId && current.id.replaceAll('#', '') != cleanJobId)) {
         _activeTrackingTimer?.cancel();
         return;
       }
@@ -316,54 +382,132 @@ class DriverJobService {
         driverLocationNotifier.value = currentPos;
       }
 
-      // 1. Push driver's live GPS location to backend
-      try {
-        final pushUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/driver-location');
-        await http.put(
-          pushUri,
-          headers: {'content-type': 'application/json'},
-          body: jsonEncode({
-            'driver_lat': currentPos.latitude,
-            'driver_lng': currentPos.longitude,
-            'driver_heading': driverHeading,
-            'status': current.status.name,
-          }),
-        ).timeout(const Duration(seconds: 3));
-      } catch (_) {}
+      // 1. FIRST: Check backend status for customer cancellation and live customer updates
+      Map<String, dynamic>? towData;
+      TowJob? updatedFromBackend;
 
-      // 2. Poll backend for customer's live location updates
       try {
-        final getUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId?for_drivers=true');
-        final res = await http.get(getUri).timeout(const Duration(seconds: 3));
+        var getUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId');
+        var res = await http.get(getUri).timeout(const Duration(seconds: 3));
+        if (res.statusCode != 200) {
+          getUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId?firebase_uid=dispatch_queue');
+          res = await http.get(getUri).timeout(const Duration(seconds: 3));
+        }
+
         if (res.statusCode == 200) {
           final body = jsonDecode(res.body);
           if (body['success'] == true && body['data'] is Map<String, dynamic>) {
-            final towData = body['data'] as Map<String, dynamic>;
-            final updatedFromBackend = TowJob.fromJson(towData);
-
-            final custLat = (towData['customer_lat'] as num?)?.toDouble() ?? updatedFromBackend.pickupLat;
-            final custLng = (towData['customer_lng'] as num?)?.toDouble() ?? updatedFromBackend.pickupLng;
-
-            activeJobNotifier.value = current.copyWith(
-              customerLat: custLat,
-              customerLng: custLng,
-              driverLat: currentPos.latitude,
-              driverLng: currentPos.longitude,
-              driverHeading: driverHeading,
-            );
+            towData = body['data'] as Map<String, dynamic>;
+            updatedFromBackend = TowJob.fromJson(towData);
           }
         }
+      } catch (_) {}
+
+      // If backend confirms the job was cancelled by customer:
+      if (towData != null && updatedFromBackend != null) {
+        final backendStatus = towData['status']?.toString().toLowerCase() ?? '';
+        final isCancelled = updatedFromBackend.status == JobStatus.cancelled ||
+            backendStatus.contains('cancel');
+
+        if (isCancelled) {
+          debugPrint('🚨 [DriverJobService] Customer cancelled active job $jobId detected by tracking loop');
+          _activeTrackingTimer?.cancel();
+          _activeTrackingTimer = null;
+
+          final cancelledJob = updatedFromBackend.copyWith(
+            status: JobStatus.cancelled,
+            customerName: updatedFromBackend.customerName.isNotEmpty
+                ? updatedFromBackend.customerName
+                : current.customerName,
+            vehicleName: updatedFromBackend.vehicleName.isNotEmpty
+                ? updatedFromBackend.vehicleName
+                : current.vehicleName,
+          );
+
+          _cancelledJobIds.add(current.id);
+          _cancelledJobIds.add(cleanJobId);
+
+          customerCancelledJobNotifier.value = cancelledJob;
+          activeJobNotifier.value = null;
+          startDispatchPolling();
+          return;
+        }
+
+        // Apply updated customer coordinates if available
+        final custLat = (towData['customer_lat'] as num?)?.toDouble() ?? updatedFromBackend.pickupLat;
+        final custLng = (towData['customer_lng'] as num?)?.toDouble() ?? updatedFromBackend.pickupLng;
+
+        activeJobNotifier.value = current.copyWith(
+          customerLat: custLat,
+          customerLng: custLng,
+          driverLat: currentPos.latitude,
+          driverLng: currentPos.longitude,
+          driverHeading: driverHeading,
+        );
+      }
+
+      // 2. SECOND: Push driver's live GPS location to backend without overriding status
+      try {
+        final statusUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/status');
+        await http.put(
+          statusUri,
+          headers: {'content-type': 'application/json'},
+          body: jsonEncode({
+            'status': towData?['status']?.toString() ?? current.status.name,
+            'driver_lat': currentPos.latitude,
+            'driver_lng': currentPos.longitude,
+            'driver_heading': driverHeading,
+          }),
+        ).timeout(const Duration(seconds: 3));
       } catch (_) {}
     });
   }
 
+  /// Driver cancels an active job, releasing it back or marking it cancelled on backend
+  Future<void> cancelJob(TowJob job, {String? reason}) async {
+    final cleanId = job.id.replaceAll('#', '').trim();
+    _cancelledJobIds.add(cleanId);
+    _cancelledJobIds.add(job.id);
+    _activeTrackingTimer?.cancel();
+    _activeTrackingTimer = null;
+    activeJobNotifier.value = null;
+
+    final safeJobId = Uri.encodeComponent(cleanId);
+    try {
+      final uri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/status');
+      await http.put(
+        uri,
+        headers: {'content-type': 'application/json'},
+        body: jsonEncode({
+          'status': 'cancelled',
+          'notes': reason != null ? 'Cancelled by driver: $reason' : 'Cancelled by driver',
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
+
+    try {
+      final delUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId?firebase_uid=dispatch_queue');
+      await http.delete(delUri).timeout(const Duration(seconds: 3));
+    } catch (_) {}
+
+    final updatedList = List<TowJob>.from(availableRequestsNotifier.value)
+      ..removeWhere((j) => j.id.replaceAll('#', '').trim() == cleanId);
+    availableRequestsNotifier.value = updatedList;
+    if (selectedRequest?.id.replaceAll('#', '').trim() == cleanId) {
+      selectedRequestNotifier.value = updatedList.isNotEmpty ? updatedList.first : null;
+    }
+
+    startDispatchPolling();
+  }
+
   /// Driver declines/rejects a job request (via left-swipe or explicit Decline button)
   void declineJob(TowJob job) {
+    final cleanId = job.id.replaceAll('#', '').trim();
     final updatedList = List<TowJob>.from(availableRequestsNotifier.value)
-      ..removeWhere((j) => j.id == job.id);
+      ..removeWhere((j) => j.id.replaceAll('#', '').trim() == cleanId);
     availableRequestsNotifier.value = updatedList;
 
-    if (selectedRequest?.id == job.id) {
+    if (selectedRequest?.id.replaceAll('#', '').trim() == cleanId) {
       selectedRequestNotifier.value = updatedList.isNotEmpty ? updatedList.first : null;
     }
   }
@@ -398,11 +542,22 @@ class DriverJobService {
     if (nextStatus == JobStatus.completed) {
       await _completeJob(current);
     } else {
-      final updated = current.copyWith(status: nextStatus);
+      if (nextStatus == JobStatus.arrived) {
+        final pickupCoord = LatLng(current.pickupLat, current.pickupLng);
+        driverLocationNotifier.value = pickupCoord;
+      }
+
+      final updated = current.copyWith(
+        status: nextStatus,
+        driverLat: nextStatus == JobStatus.arrived ? current.pickupLat : current.driverLat,
+        driverLng: nextStatus == JobStatus.arrived ? current.pickupLng : current.driverLng,
+      );
       activeJobNotifier.value = updated;
 
+      final cleanId = current.id.replaceAll('#', '').trim();
+      final safeJobId = Uri.encodeComponent(cleanId);
       try {
-        final uri = Uri.parse('${ApiConfig.towsEndpoint}/${current.id}/status');
+        final uri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/status');
         await http.put(
           uri,
           headers: {'content-type': 'application/json'},
@@ -418,24 +573,38 @@ class DriverJobService {
 
     final completed = job.copyWith(status: JobStatus.completed);
     final currentList = List<TowJob>.from(completedJobsNotifier.value);
+    currentList.removeWhere((c) => c.id == job.id);
     currentList.insert(0, completed);
     completedJobsNotifier.value = currentList;
 
     final earned = job.estimatedPayout;
+    final newEarnings = driver.todayEarnings + earned;
+    final newTotalTows = driver.totalTows + 1;
+
     driverNotifier.value = driver.copyWith(
-      todayEarnings: driver.todayEarnings + earned,
-      totalTows: driver.totalTows + 1,
+      todayEarnings: newEarnings,
+      totalTows: newTotalTows,
     );
 
-    activeJobNotifier.value = null;
-
     try {
-      final uri = Uri.parse('${ApiConfig.towsEndpoint}/${job.id}/status');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('driver_today_earnings', newEarnings);
+      await prefs.setInt('driver_total_tows', newTotalTows);
+    } catch (_) {}
+
+    // 1. Immediately update backend status to completed BEFORE clearing activeJob
+    final cleanId = job.id.replaceAll('#', '').trim();
+    final safeJobId = Uri.encodeComponent(cleanId);
+    try {
+      final uri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/status');
       await http.put(
         uri,
         headers: {'content-type': 'application/json'},
         body: jsonEncode({'status': 'completed'}),
       ).timeout(const Duration(seconds: 4));
     } catch (_) {}
+
+    activeJobNotifier.value = null;
+    startDispatchPolling();
   }
 }

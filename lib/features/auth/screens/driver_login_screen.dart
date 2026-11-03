@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/driver_colors.dart';
 import '../../../shared/widgets/google_logo.dart';
-import '../../dashboard/screens/dashboard_screen.dart';
+import '../../navigation/screens/driver_main_shell.dart';
 import '../services/driver_auth_service.dart';
 import 'driver_register_screen.dart';
 
@@ -14,10 +15,8 @@ class DriverLoginScreen extends StatefulWidget {
 }
 
 class _DriverLoginScreenState extends State<DriverLoginScreen> {
-  final TextEditingController _idController =
-      TextEditingController(text: 'marcus.vance@roacstowing.com');
-  final TextEditingController _passwordController =
-      TextEditingController(text: 'driver2026');
+  final TextEditingController _idController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   final DriverAuthService _authService = DriverAuthService();
 
   bool _obscurePassword = true;
@@ -25,6 +24,24 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
   bool _isLoading = false;
   bool _isGoogleLoading = false;
   bool _isAppleLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedEmail = prefs.getString('driver_saved_email');
+      if (savedEmail != null && savedEmail.isNotEmpty && mounted) {
+        setState(() {
+          _idController.text = savedEmail;
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -71,7 +88,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (ctx) => const DashboardScreen()),
+          MaterialPageRoute(builder: (ctx) => const DriverMainShell()),
         );
       }
     } catch (e) {
@@ -114,7 +131,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
       setState(() => _isGoogleLoading = false);
 
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (ctx) => const DashboardScreen()),
+        MaterialPageRoute(builder: (ctx) => const DriverMainShell()),
       );
     } catch (e) {
       if (!mounted) return;
@@ -156,7 +173,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
       setState(() => _isAppleLoading = false);
 
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (ctx) => const DashboardScreen()),
+        MaterialPageRoute(builder: (ctx) => const DriverMainShell()),
       );
     } catch (e) {
       if (!mounted) return;
@@ -234,7 +251,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
               );
               if (!mounted) return;
               nav.pushReplacement(
-                MaterialPageRoute(builder: (c) => const DashboardScreen()),
+                MaterialPageRoute(builder: (c) => const DriverMainShell()),
               );
             },
             child: const Text('Use Demo Driver', style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),

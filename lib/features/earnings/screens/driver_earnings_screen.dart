@@ -55,60 +55,82 @@ class DriverEarningsScreen extends StatefulWidget {
 class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
   final DriverJobService _jobService = DriverJobService();
 
-  final List<WeeklyData> _weeks = const [
-    WeeklyData(
-      dateRange: 'Oct 09 - Oct 15',
-      days: [
-        DailyPerformance(dayName: 'Mon', fullDayName: 'Monday', dateString: 'Oct 09', amount: 180, completedTows: 3, onlineHours: 4.5, rating: 4.90),
-        DailyPerformance(dayName: 'Tue', fullDayName: 'Tuesday', dateString: 'Oct 10', amount: 260, completedTows: 5, onlineHours: 6.0, rating: 4.92),
-        DailyPerformance(dayName: 'Wed', fullDayName: 'Wednesday', dateString: 'Oct 11', amount: 320, completedTows: 6, onlineHours: 7.2, rating: 4.95),
-        DailyPerformance(dayName: 'Thu', fullDayName: 'Thursday', dateString: 'Oct 12', amount: 210, completedTows: 4, onlineHours: 5.0, rating: 4.91),
-        DailyPerformance(dayName: 'Fri', fullDayName: 'Friday', dateString: 'Oct 13', amount: 330, completedTows: 6, onlineHours: 7.0, rating: 4.98),
-        DailyPerformance(dayName: 'Sat', fullDayName: 'Saturday', dateString: 'Oct 14', amount: 395, completedTows: 7, onlineHours: 8.2, rating: 4.96),
-        DailyPerformance(dayName: 'Sun', fullDayName: 'Sunday', dateString: 'Oct 15', amount: 145, completedTows: 2, onlineHours: 3.5, rating: 5.00),
-      ],
-    ),
-    WeeklyData(
-      dateRange: 'Oct 16 - Oct 22',
-      days: [
-        DailyPerformance(dayName: 'Mon', fullDayName: 'Monday', dateString: 'Oct 16', amount: 240, completedTows: 4, onlineHours: 5.5, rating: 4.93),
-        DailyPerformance(dayName: 'Tue', fullDayName: 'Tuesday', dateString: 'Oct 17', amount: 310, completedTows: 6, onlineHours: 6.8, rating: 4.96),
-        DailyPerformance(dayName: 'Wed', fullDayName: 'Wednesday', dateString: 'Oct 18', amount: 290, completedTows: 5, onlineHours: 6.2, rating: 4.94),
-        DailyPerformance(dayName: 'Thu', fullDayName: 'Thursday', dateString: 'Oct 19', amount: 220, completedTows: 4, onlineHours: 5.2, rating: 4.92),
-        DailyPerformance(dayName: 'Fri', fullDayName: 'Friday', dateString: 'Oct 20', amount: 385, completedTows: 7, onlineHours: 8.0, rating: 4.97),
-        DailyPerformance(dayName: 'Sat', fullDayName: 'Saturday', dateString: 'Oct 21', amount: 450, completedTows: 9, onlineHours: 9.2, rating: 4.98),
-        DailyPerformance(dayName: 'Sun', fullDayName: 'Sunday', dateString: 'Oct 22', amount: 160, completedTows: 3, onlineHours: 4.0, rating: 4.95),
-      ],
-    ),
-    WeeklyData(
-      dateRange: 'Oct 23 - Oct 29',
-      days: [
-        DailyPerformance(dayName: 'Mon', fullDayName: 'Monday', dateString: 'Oct 23', amount: 210, completedTows: 4, onlineHours: 5.0, rating: 4.94),
-        DailyPerformance(dayName: 'Tue', fullDayName: 'Tuesday', dateString: 'Oct 24', amount: 280, completedTows: 5, onlineHours: 6.2, rating: 4.95),
-        DailyPerformance(dayName: 'Wed', fullDayName: 'Wednesday', dateString: 'Oct 25', amount: 360, completedTows: 7, onlineHours: 7.8, rating: 4.97),
-        DailyPerformance(dayName: 'Thu', fullDayName: 'Thursday', dateString: 'Oct 26', amount: 190, completedTows: 3, onlineHours: 4.5, rating: 4.90),
-        DailyPerformance(dayName: 'Fri', fullDayName: 'Friday', dateString: 'Oct 27', amount: 340, completedTows: 6, onlineHours: 7.0, rating: 4.96),
-        DailyPerformance(dayName: 'Sat', fullDayName: 'Saturday', dateString: 'Oct 28', amount: 415, completedTows: 8, onlineHours: 8.5, rating: 4.98),
-        DailyPerformance(dayName: 'Sun', fullDayName: 'Sunday', dateString: 'Oct 29', amount: 120, completedTows: 2, onlineHours: 3.2, rating: 4.92),
-      ],
-    ),
-    WeeklyData(
-      dateRange: 'Oct 30 - Nov 05',
-      days: [
-        DailyPerformance(dayName: 'Mon', fullDayName: 'Monday', dateString: 'Oct 30', amount: 235, completedTows: 4, onlineHours: 5.2, rating: 4.95),
-        DailyPerformance(dayName: 'Tue', fullDayName: 'Tuesday', dateString: 'Oct 31', amount: 290, completedTows: 5, onlineHours: 6.5, rating: 4.96),
-        DailyPerformance(dayName: 'Wed', fullDayName: 'Wednesday', dateString: 'Nov 01', amount: 345, completedTows: 6, onlineHours: 7.4, rating: 4.93),
-        DailyPerformance(dayName: 'Thu', fullDayName: 'Thursday', dateString: 'Nov 02', amount: 205, completedTows: 4, onlineHours: 4.8, rating: 4.91),
-        DailyPerformance(dayName: 'Fri', fullDayName: 'Friday', dateString: 'Nov 03', amount: 370, completedTows: 7, onlineHours: 7.8, rating: 4.98),
-        DailyPerformance(dayName: 'Sat', fullDayName: 'Saturday', dateString: 'Nov 04', amount: 425, completedTows: 8, onlineHours: 8.7, rating: 4.97),
-        DailyPerformance(dayName: 'Sun', fullDayName: 'Sunday', dateString: 'Nov 05', amount: 130, completedTows: 2, onlineHours: 3.1, rating: 4.94),
-      ],
-    ),
-  ];
+  late List<WeeklyData> _weeks;
+  int _selectedWeekIndex = 0;
+  int _selectedDayIndex = 0;
 
-  // Default to Week 2 ('Oct 23 - Oct 29') and Saturday (index 5)
-  int _selectedWeekIndex = 2;
-  int _selectedDayIndex = 5;
+  @override
+  void initState() {
+    super.initState();
+    _weeks = _buildWeeks();
+    _selectedWeekIndex = 0;
+    _selectedDayIndex = (DateTime.now().weekday - 1).clamp(0, 6);
+  }
+
+  List<WeeklyData> _buildWeeks() {
+    final now = DateTime.now();
+    final driver = _jobService.driver;
+    final completedCount = _jobService.completedJobs.length;
+    final todayEarned = driver.todayEarnings;
+
+    final daysToMonday = (now.weekday - 1);
+    final monday = now.subtract(Duration(days: daysToMonday));
+
+    List<WeeklyData> generatedWeeks = [];
+
+    for (int w = 0; w < 4; w++) {
+      final weekMonday = monday.subtract(Duration(days: w * 7));
+      final weekSunday = weekMonday.add(const Duration(days: 6));
+      final dateRangeStr =
+          '${_monthName(weekMonday.month)} ${weekMonday.day.toString().padLeft(2, '0')} - ${_monthName(weekSunday.month)} ${weekSunday.day.toString().padLeft(2, '0')}';
+
+      List<DailyPerformance> days = [];
+      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const fullDayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+      for (int d = 0; d < 7; d++) {
+        final dayDate = weekMonday.add(Duration(days: d));
+        final isToday = w == 0 && (d == (now.weekday - 1));
+        final isPastDayInCurrentWeek = w == 0 && (d < (now.weekday - 1));
+
+        double amount = 0;
+        int tows = 0;
+        double hours = 0;
+        double rating = 4.95;
+
+        if (isToday) {
+          amount = todayEarned;
+          tows = completedCount;
+          hours = driver.isOnline ? 3.5 : 0.0;
+        } else if (isPastDayInCurrentWeek || w > 0) {
+          tows = (driver.totalTows > 0) ? ((driver.totalTows ~/ 45) + (d % 2)) : 0;
+          amount = tows * 85.0;
+          hours = tows > 0 ? (tows * 1.2) : 0.0;
+        }
+
+        days.add(
+          DailyPerformance(
+            dayName: dayNames[d],
+            fullDayName: fullDayNames[d],
+            dateString: '${_monthName(dayDate.month)} ${dayDate.day.toString().padLeft(2, '0')}',
+            amount: amount,
+            completedTows: tows,
+            onlineHours: hours,
+            rating: rating,
+          ),
+        );
+      }
+
+      generatedWeeks.add(WeeklyData(dateRange: dateRangeStr, days: days));
+    }
+
+    return generatedWeeks;
+  }
+
+  String _monthName(int month) {
+    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return m[(month - 1) % 12];
+  }
 
   void _goToPreviousWeek() {
     if (_selectedWeekIndex > 0) {

@@ -80,6 +80,8 @@ class TowJob {
   final String urgencyReason;
   final List<String> equipmentRequirements;
 
+  final String? driverId;
+  final String? driverName;
   final double? customerLat;
   final double? customerLng;
   final double? driverLat;
@@ -103,6 +105,8 @@ class TowJob {
     required this.pickupLng,
     required this.dropLat,
     required this.dropLng,
+    this.driverId,
+    this.driverName,
     this.customerLat,
     this.customerLng,
     this.driverLat,
@@ -133,7 +137,9 @@ class TowJob {
   double get effectiveCustomerLng => customerLng ?? pickupLng;
 
   String get payoutFormatted => '\$${estimatedPayout.toStringAsFixed(2)}';
-  String get payoutWhole => '\$${estimatedPayout.toInt()}';
+  String get payoutWhole => (estimatedPayout % 1 == 0)
+      ? '\$${estimatedPayout.toInt()}'
+      : '\$${estimatedPayout.toStringAsFixed(2)}';
   bool get isHighPay => estimatedPayout >= 150.0;
 
   List<String> get tags {
@@ -173,6 +179,12 @@ class TowJob {
     String? notes,
     bool? isUrgent,
     double? estimatedPayout,
+    String? driverId,
+    String? driverName,
+    String? customerName,
+    String? vehicleName,
+    String? pickupAddress,
+    String? licensePlate,
     double? customerLat,
     double? customerLng,
     double? driverLat,
@@ -187,19 +199,21 @@ class TowJob {
       id: id,
       serviceTitle: serviceTitle,
       requestType: requestType,
-      vehicleName: vehicleName,
+      vehicleName: vehicleName ?? this.vehicleName,
       vehicleYear: vehicleYear,
       vehicleMake: vehicleMake,
       vehicleModel: vehicleModel,
       vehicleCategory: vehicleCategory,
-      licensePlate: licensePlate,
+      licensePlate: licensePlate ?? this.licensePlate,
       vehicleImage: vehicleImage,
-      pickupAddress: pickupAddress,
+      pickupAddress: pickupAddress ?? this.pickupAddress,
       dropAddress: dropAddress,
       pickupLat: pickupLat ?? this.pickupLat,
       pickupLng: pickupLng ?? this.pickupLng,
       dropLat: dropLat ?? this.dropLat,
       dropLng: dropLng ?? this.dropLng,
+      driverId: driverId ?? this.driverId,
+      driverName: driverName ?? this.driverName,
       customerLat: customerLat ?? this.customerLat,
       customerLng: customerLng ?? this.customerLng,
       driverLat: driverLat ?? this.driverLat,
@@ -208,7 +222,7 @@ class TowJob {
       distanceToPickup: distanceToPickup,
       pickupEta: pickupEta,
       tripDuration: tripDuration,
-      customerName: customerName,
+      customerName: customerName ?? this.customerName,
       customerPhone: customerPhone,
       customerRating: customerRating,
       totalCost: totalCost,
@@ -308,25 +322,137 @@ class TowJob {
     if (payout <= 0) {
       final costNum = double.tryParse(totalCostStr.replaceAll(RegExp(r'[^0-9.]'), ''));
       if (costNum != null && costNum > 0) {
-        // Driver earnings is ~85% of customer fare
-        payout = double.parse((costNum * 0.85).toStringAsFixed(2));
+        // Driver earnings matches customer fare exactly
+        payout = costNum;
       } else {
-        payout = 95.00;
+        payout = 120.00;
       }
     }
 
-    // Dynamic Coordinates with Coimbatore fallback hub (11.1389, 77.0325)
-    final pLat = parseCoord(json['pickup_lat'] ?? json['pickupLat']) ?? 11.1389;
-    final pLng = parseCoord(json['pickup_lng'] ?? json['pickupLng']) ?? 77.0325;
-    final dLat = parseCoord(json['drop_lat'] ?? json['dropLat']) ?? (pLat + 0.015);
-    final dLng = parseCoord(json['drop_lng'] ?? json['dropLng']) ?? (pLng + 0.012);
+    // Dynamic Coordinates with regex extraction & Coimbatore regional landmarks
+    final rawPickupAddress = (json['pickupAddress'] ?? json['pickup_address'] ?? '').toString();
+    final rawDropAddress = (json['dropAddress'] ?? json['drop_address'] ?? '').toString();
+
+    // Helper to extract (lat, lng) from address strings like "(11.1389, 77.0326)"
+    double? extractCoordFromText(String text, int index) {
+      final match = RegExp(r'\((-?\d+\.?\d*),\s*(-?\d+\.?\d*)\)').firstMatch(text);
+      if (match != null && match.groupCount >= 2) {
+        return double.tryParse(match.group(index)!);
+      }
+      return null;
+    }
+
+    // Helper for known Coimbatore hubs
+    String lookupCoimbatoreHubName(double lat, double lng) {
+      if ((lat - 11.1085).abs() < 0.020 && (lng - 77.0195).abs() < 0.020) {
+        return 'Kurumbapalayam, Coimbatore North';
+      }
+      if ((lat - 11.1388).abs() < 0.025 && (lng - 77.0326).abs() < 0.025) {
+        return 'Onnipalayam Pudur, Coimbatore North';
+      }
+      if ((lat - 11.1440).abs() < 0.025 && (lng - 77.0540).abs() < 0.025) {
+        return 'Kovilpalayam, Kunnathur';
+      }
+      if ((lat - 11.0805).abs() < 0.025 && (lng - 76.9961).abs() < 0.025) {
+        return 'Saravanampatti, Coimbatore';
+      }
+      if ((lat - 11.0268).abs() < 0.025 && (lng - 77.0028).abs() < 0.025) {
+        return 'Peelamedu, Coimbatore';
+      }
+      if ((lat - 11.0028).abs() < 0.025 && (lng - 77.0189).abs() < 0.025) {
+        return 'Singanallur, Coimbatore';
+      }
+      if ((lat - 11.0183).abs() < 0.025 && (lng - 76.9644).abs() < 0.025) {
+        return 'Gandhipuram, Coimbatore';
+      }
+      return 'Onnipalayam Pudur, Coimbatore North';
+    }
+
+    double? lookupCoimbatoreHubLat(String address) {
+      final lower = address.toLowerCase();
+      if (lower.contains('onnipalayam')) return 11.1389;
+      if (lower.contains('kurumbapalayam')) return 11.1085;
+      if (lower.contains('kunnathur') || lower.contains('kovilpalayam')) return 11.1440;
+      if (lower.contains('saravanampatti')) return 11.0805;
+      if (lower.contains('peelamedu') || lower.contains('avinashi')) return 11.0268;
+      if (lower.contains('trichy road') || lower.contains('singanallur')) return 11.0028;
+      if (lower.contains('gandhipuram')) return 11.0183;
+      return null;
+    }
+
+    double? lookupCoimbatoreHubLng(String address) {
+      final lower = address.toLowerCase();
+      if (lower.contains('onnipalayam')) return 77.0326;
+      if (lower.contains('kurumbapalayam')) return 77.0195;
+      if (lower.contains('kunnathur') || lower.contains('kovilpalayam')) return 77.0540;
+      if (lower.contains('saravanampatti')) return 76.9961;
+      if (lower.contains('peelamedu') || lower.contains('avinashi')) return 77.0028;
+      if (lower.contains('trichy road') || lower.contains('singanallur')) return 77.0189;
+      if (lower.contains('gandhipuram')) return 76.9644;
+      return null;
+    }
+
+    final pLat = parseCoord(json['pickup_lat'] ?? json['pickupLat']) ??
+        extractCoordFromText(rawPickupAddress, 1) ??
+        lookupCoimbatoreHubLat(rawPickupAddress) ??
+        11.1389;
+
+    final pLng = parseCoord(json['pickup_lng'] ?? json['pickupLng']) ??
+        extractCoordFromText(rawPickupAddress, 2) ??
+        lookupCoimbatoreHubLng(rawPickupAddress) ??
+        77.0325;
+
+    final dLat = parseCoord(json['drop_lat'] ?? json['dropLat']) ??
+        extractCoordFromText(rawDropAddress, 1) ??
+        lookupCoimbatoreHubLat(rawDropAddress) ??
+        (pLat + 0.015);
+
+    final dLng = parseCoord(json['drop_lng'] ?? json['dropLng']) ??
+        extractCoordFromText(rawDropAddress, 2) ??
+        lookupCoimbatoreHubLng(rawDropAddress) ??
+        (pLng + 0.012);
 
     final custLat = parseCoord(json['customer_lat'] ?? json['customerLat']) ?? pLat;
     final custLng = parseCoord(json['customer_lng'] ?? json['customerLng']) ?? pLng;
 
-    final customerName = (json['customer_name'] ?? json['customerName'] ?? 'Customer').toString().trim();
-    final customerPhone = (json['customer_phone'] ?? json['customerPhone'] ?? '+1 (555) 019-2831').toString().trim();
+    // Real Customer Identity Resolution (from payload or date_formatted / notes)
+    String customerName = (json['customer_name'] ?? json['customerName'] ?? '').toString().trim();
+    String customerPhone = (json['customer_phone'] ?? json['customerPhone'] ?? '').toString().trim();
+
+    final dateStr = (json['date_formatted'] ?? json['dateFormatted'] ?? '').toString();
+    if (customerName.isEmpty || customerName.toLowerCase() == 'customer') {
+      final match = RegExp(r'\[Customer:\s*([^|\]]+)').firstMatch(dateStr);
+      if (match != null) {
+        customerName = match.group(1)!.trim();
+      }
+    }
+    if (customerPhone.isEmpty || customerPhone.contains('019-2831')) {
+      final matchPhone = RegExp(r'Phone:\s*([^\]]+)').firstMatch(dateStr);
+      if (matchPhone != null) {
+        customerPhone = matchPhone.group(1)!.trim();
+      }
+    }
+
     final notes = (json['notes'] ?? json['special_notes'])?.toString() ?? 'Customer requested $serviceTitle. Proceed to pickup coordinates.';
+
+    // Clean addresses: Never display raw "Current Location (lat, lng)" or raw coordinates
+    String resolvedPickup = (json['pickupAddress'] ?? json['pickup_address'] ?? '').toString().trim();
+    if (resolvedPickup.contains('(')) {
+      resolvedPickup = resolvedPickup.replaceAll(RegExp(r'\s*\(-?\d+\.?\d*,\s*-?\d+\.?\d*\)'), '').trim();
+    }
+    if (resolvedPickup.isEmpty || 
+        resolvedPickup.toLowerCase().startsWith('current location') ||
+        (resolvedPickup.toLowerCase().contains('kovilpalayam') && (pLat - 11.1388).abs() < 0.015)) {
+      resolvedPickup = lookupCoimbatoreHubName(pLat, pLng);
+    }
+
+    String resolvedDrop = (json['dropAddress'] ?? json['drop_address'] ?? '').toString().trim();
+    if (resolvedDrop.contains('(')) {
+      resolvedDrop = resolvedDrop.replaceAll(RegExp(r'\s*\(-?\d+\.?\d*,\s*-?\d+\.?\d*\)'), '').trim();
+    }
+    if (resolvedDrop.isEmpty || resolvedDrop.toLowerCase().startsWith('current location')) {
+      resolvedDrop = lookupCoimbatoreHubName(dLat, dLng);
+    }
 
     return TowJob(
       id: json['id']?.toString() ?? 'TW-${DateTime.now().millisecondsSinceEpoch % 100000}',
@@ -339,12 +465,14 @@ class TowJob {
       vehicleCategory: vehicleCategory,
       licensePlate: json['licensePlate'] ?? json['license_plate'] ?? '',
       vehicleImage: vehicleImage,
-      pickupAddress: json['pickupAddress'] ?? json['pickup_address'] ?? 'Pickup Location',
-      dropAddress: json['dropAddress'] ?? json['drop_address'] ?? 'Drop Destination',
+      pickupAddress: resolvedPickup,
+      dropAddress: resolvedDrop,
       pickupLat: pLat,
       pickupLng: pLng,
       dropLat: dLat,
       dropLng: dLng,
+      driverId: (json['driver_id'] ?? json['driverId'])?.toString(),
+      driverName: (json['driver_name'] ?? json['driverName'])?.toString(),
       customerLat: custLat,
       customerLng: custLng,
       driverLat: parseCoord(json['driver_lat'] ?? json['driverLat']),
@@ -393,6 +521,8 @@ class TowJob {
       'pickup_lng': pickupLng,
       'drop_lat': dropLat,
       'drop_lng': dropLng,
+      'driver_id': driverId,
+      'driver_name': driverName,
       'distance_to_pickup': distanceToPickup,
       'pickup_eta': pickupEta,
       'trip_duration': tripDuration,

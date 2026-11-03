@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/driver_colors.dart';
 import '../../../shared/widgets/google_logo.dart';
-import '../../dashboard/screens/dashboard_screen.dart';
+import '../../navigation/screens/driver_main_shell.dart';
 import '../services/driver_auth_service.dart';
 import '../services/driver_email_otp_service.dart';
 
@@ -276,7 +276,7 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
 
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (ctx) => const DashboardScreen()),
+          MaterialPageRoute(builder: (ctx) => const DriverMainShell()),
           (route) => false,
         );
       }

@@ -59,16 +59,16 @@ class DriverProfile {
 
   static DriverProfile mockDriver = const DriverProfile(
     id: 'DRV-7701',
-    name: 'YOGESHWARAN M',
+    name: 'Driver Partner',
     phone: '+91 98765 43210',
-    email: 'yogeshwaran.m@roacstowing.com',
-    truckModel: '2024 Peterbilt 337 Flatbed Heavy',
+    email: 'driver@roacstowing.com',
+    truckModel: 'Flatbed Carrier Heavy',
     licensePlate: 'TOW-PRO-88',
     rating: 4.9,
-    totalTows: 546,
-    todayEarnings: 345.50,
+    totalTows: 0,
+    todayEarnings: 0.0,
     isOnline: true,
     isVerified: true,
-    monthsActive: 5,
+    monthsActive: 1,
   );
 }
