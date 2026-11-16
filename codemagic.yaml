@@ -1,0 +1,35 @@
+workflows:
+  ios-driver-build:
+    name: Build Towing Driver iOS
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Install CocoaPods
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Build Flutter iOS (.app and .ipa)
+        script: |
+          flutter build ios --release --no-codesign
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r Towing_Driver_App.ipa Payload
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+      - build/ios/iphoneos/Towing_Driver_App.ipa
+      - build/ios/iphoneos/*.ipa
+      - build/ios/iphoneos/*.app
+    publishing:
+      email:
+        recipients:
+          - malarkannanmadhavan@gmail.com
+        notify:
+          success: true
+          failure: true
