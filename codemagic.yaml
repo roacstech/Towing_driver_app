@@ -8,14 +8,21 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
-      - name: Get Flutter packages
+      - name: Configure Flutter and Disable SPM
         script: |
+          set -e
+          flutter config --no-enable-swift-package-manager
+          flutter clean
           flutter packages pub get
       - name: Install CocoaPods
         script: |
-          find . -name "Podfile" -execdir pod install \;
+          set -e
+          cd ios
+          pod install --repo-update
+          cd ..
       - name: Build Flutter iOS (.app and .ipa)
         script: |
+          set -e
           flutter build ios --release --no-codesign
           cd build/ios/iphoneos
           mkdir -p Payload
