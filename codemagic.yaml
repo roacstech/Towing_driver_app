@@ -13,16 +13,25 @@ workflows:
           set -e
           flutter config --no-enable-swift-package-manager
           flutter packages pub get
-          flutter build ios --release --no-codesign
-          cd build/ios/iphoneos
+          flutter build ios --config-only --no-codesign
+          xcodebuild build \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            -derivedDataPath build/ios
+          cd build/ios/Build/Products/Release-iphoneos
           mkdir -p Payload
           cp -r Runner.app Payload/
           zip -r Towing_Driver_App.ipa Payload
     artifacts:
-      - build/ios/iphoneos/Runner.app
-      - build/ios/iphoneos/Towing_Driver_App.ipa
-      - build/ios/iphoneos/*.ipa
-      - build/ios/iphoneos/*.app
+      - build/ios/Build/Products/Release-iphoneos/Runner.app
+      - build/ios/Build/Products/Release-iphoneos/Towing_Driver_App.ipa
+      - build/ios/Build/Products/Release-iphoneos/*.ipa
+      - build/ios/Build/Products/Release-iphoneos/*.app
     publishing:
       email:
         recipients:
