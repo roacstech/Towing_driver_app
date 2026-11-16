@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/api_config.dart';
+import '../../../core/services/driver_sound_service.dart';
 import '../../profile/models/driver_profile.dart';
 import '../models/tow_job.dart';
 
@@ -17,13 +18,21 @@ class DriverJobService {
   final ValueNotifier<DriverProfile> driverNotifier =
       ValueNotifier<DriverProfile>(DriverProfile.mockDriver);
 
-  // Available list of requests for the card stack and 'See All' list (real requests from backend only)
+  // Available list of requests for the card stack (strictly one-by-one sequential offer)
   final ValueNotifier<List<TowJob>> availableRequestsNotifier =
       ValueNotifier<List<TowJob>>([]);
 
   // The currently focused/selected request card (syncs with the top map's route polyline)
   final ValueNotifier<TowJob?> selectedRequestNotifier =
       ValueNotifier<TowJob?>(null);
+
+  // Active incoming offer with 10-second countdown and continuous alert ringing
+  final ValueNotifier<TowJob?> currentIncomingOfferNotifier =
+      ValueNotifier<TowJob?>(null);
+  final ValueNotifier<int> offerCountdownSecondsNotifier =
+      ValueNotifier<int>(10);
+  final ValueNotifier<double> offerTimerProgressNotifier =
+      ValueNotifier<double>(1.0);
 
   final ValueNotifier<TowJob?> activeJobNotifier = ValueNotifier<TowJob?>(null);
   final ValueNotifier<TowJob?> pendingRequestNotifier = ValueNotifier<TowJob?>(null);
@@ -46,6 +55,7 @@ class DriverJobService {
   DriverProfile get driver => driverNotifier.value;
   List<TowJob> get availableRequests => availableRequestsNotifier.value;
   TowJob? get selectedRequest => selectedRequestNotifier.value;
+  TowJob? get currentIncomingOffer => currentIncomingOfferNotifier.value;
   TowJob? get activeJob => activeJobNotifier.value;
   TowJob? get pendingRequest => pendingRequestNotifier.value;
   List<TowJob> get completedJobs => completedJobsNotifier.value;
@@ -54,7 +64,16 @@ class DriverJobService {
   Timer? _pollingTimer;
   Timer? _initialCheckTimer;
   Timer? _activeTrackingTimer;
+  Timer? _offerCountdownTimer;
+  Timer? _cooldownCheckTimer;
+  int _remainingOfferMs = 10000;
+
   final Set<String> _cancelledJobIds = <String>{};
+  final Set<String> _completedJobIds = <String>{};
+  final Map<String, int> _jobPassCounts = <String, int>{};
+  final Map<String, DateTime> _jobCooldownUntil = <String, DateTime>{};
+  final Set<String> _declinedJobIds = <String>{};
+  List<TowJob> _cachedPendingJobs = <TowJob>[];
 
   Future<void> init() async {
     try {
@@ -66,6 +85,11 @@ class DriverJobService {
       final savedPlate = prefs.getString('driver_saved_plate');
       final savedEarnings = prefs.getDouble('driver_today_earnings');
       final savedTows = prefs.getInt('driver_total_tows');
+
+      final savedCompleted = prefs.getStringList('driver_completed_job_ids');
+      if (savedCompleted != null) {
+        _completedJobIds.addAll(savedCompleted);
+      }
 
       driverNotifier.value = driver.copyWith(
         name: (savedName != null && savedName.trim().isNotEmpty) ? savedName.trim() : driver.name,
@@ -83,10 +107,19 @@ class DriverJobService {
     // Ensure requests start strictly empty (no mock or stale data)
     availableRequestsNotifier.value = [];
     selectedRequestNotifier.value = null;
+    currentIncomingOfferNotifier.value = null;
+    activeJobNotifier.value = null;
 
     if (driver.isOnline) {
       startDispatchPolling();
     }
+  }
+
+  Future<void> _saveCompletedJobIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('driver_completed_job_ids', _completedJobIds.toList());
+    } catch (_) {}
   }
 
   /// Obtains current GPS coordinates of the tow truck driver
@@ -140,7 +173,7 @@ class DriverJobService {
 
   void startDispatchPolling() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (driver.isOnline && activeJob == null) {
         checkBackendForPendingJobs();
       }
@@ -148,7 +181,7 @@ class DriverJobService {
 
     if (activeJob == null) {
       _initialCheckTimer?.cancel();
-      _initialCheckTimer = Timer(const Duration(milliseconds: 500), () {
+      _initialCheckTimer = Timer(const Duration(milliseconds: 300), () {
         checkBackendForPendingJobs();
       });
     }
@@ -159,6 +192,9 @@ class DriverJobService {
     _pollingTimer = null;
     _initialCheckTimer?.cancel();
     _initialCheckTimer = null;
+    _cooldownCheckTimer?.cancel();
+    _cooldownCheckTimer = null;
+    _stopCurrentOffer();
   }
 
   /// Checks shared PostgreSQL / REST backend for new tows created by Customer App
@@ -206,57 +242,131 @@ class DriverJobService {
             .map((j) => TowJob.fromJson(j as Map<String, dynamic>))
             .toList();
 
-        // Check if an active job was cancelled by the customer in backend
+        // 3. Check if current active job was completed or cancelled on backend
         if (activeJob != null) {
           final current = activeJob!;
-          final cancelledMatch = allJobs.cast<TowJob?>().firstWhere(
-            (j) => j != null &&
-                (j.id == current.id ||
-                    j.id.replaceAll('#', '') == current.id.replaceAll('#', '')) &&
-                (j.status == JobStatus.cancelled),
+          final cleanCurrentId = current.id.replaceAll('#', '').trim();
+          final matchingJob = allJobs.cast<TowJob?>().firstWhere(
+            (j) => j != null && j.id.replaceAll('#', '').trim() == cleanCurrentId,
             orElse: () => null,
           );
-          if (cancelledMatch != null) {
-            _activeTrackingTimer?.cancel();
-            _activeTrackingTimer = null;
-            _cancelledJobIds.add(current.id);
-            _cancelledJobIds.add(current.id.replaceAll('#', '').trim());
 
-            final cancelledJob = cancelledMatch.copyWith(
-              status: JobStatus.cancelled,
-              customerName: cancelledMatch.customerName.isNotEmpty
-                  ? cancelledMatch.customerName
-                  : current.customerName,
-              vehicleName: cancelledMatch.vehicleName.isNotEmpty
-                  ? cancelledMatch.vehicleName
-                  : current.vehicleName,
-            );
-            customerCancelledJobNotifier.value = cancelledJob;
-            activeJobNotifier.value = null;
+          if (matchingJob != null) {
+            if (matchingJob.status == JobStatus.completed) {
+              debugPrint('🏁 [DriverJobService] Active job $cleanCurrentId completed in backend. Clearing active job.');
+              _activeTrackingTimer?.cancel();
+              _activeTrackingTimer = null;
+              _completedJobIds.add(cleanCurrentId);
+              _completedJobIds.add(current.id);
+              _completedJobIds.add('#$cleanCurrentId');
+              _saveCompletedJobIds();
+
+              final completedList = List<TowJob>.from(completedJobsNotifier.value);
+              if (!completedList.any((c) => c.id.replaceAll('#', '').trim() == cleanCurrentId)) {
+                completedList.insert(0, matchingJob);
+                completedJobsNotifier.value = completedList;
+              }
+
+              activeJobNotifier.value = null;
+            } else if (matchingJob.status == JobStatus.cancelled) {
+              debugPrint('🚨 [DriverJobService] Active job $cleanCurrentId cancelled in backend.');
+              _activeTrackingTimer?.cancel();
+              _activeTrackingTimer = null;
+              _cancelledJobIds.add(cleanCurrentId);
+              _cancelledJobIds.add(current.id);
+              _cancelledJobIds.add('#$cleanCurrentId');
+
+              final cancelledJob = matchingJob.copyWith(
+                status: JobStatus.cancelled,
+                customerName: matchingJob.customerName.isNotEmpty
+                    ? matchingJob.customerName
+                    : current.customerName,
+                vehicleName: matchingJob.vehicleName.isNotEmpty
+                    ? matchingJob.vehicleName
+                    : current.vehicleName,
+              );
+              customerCancelledJobNotifier.value = cancelledJob;
+              activeJobNotifier.value = null;
+            }
           }
         }
 
-        // Only show truly pending / unassigned customer dispatches created recently (within last 60 mins)
+        // 4. Check if a recent fresh active job was assigned directly by admin to this driver
+        if (activeJob == null && driver.isOnline) {
+          final driverNameLower = driver.name.toLowerCase().trim();
+          final adminAssignedMatch = allJobs.cast<TowJob?>().firstWhere(
+            (j) {
+              if (j == null) return false;
+              final cleanId = j.id.replaceAll('#', '').trim();
+              if (_completedJobIds.contains(cleanId) ||
+                  _completedJobIds.contains(j.id) ||
+                  _cancelledJobIds.contains(cleanId) ||
+                  _declinedJobIds.contains(cleanId)) {
+                return false;
+              }
+              // STRICT: Never pick up completed or cancelled orders!
+              if (j.status == JobStatus.completed || j.status == JobStatus.cancelled) {
+                return false;
+              }
+              // STRICT: Only consider fresh dispatches from the last 30 minutes
+              if (now.difference(j.createdAt).inMinutes.abs() > 30) {
+                return false;
+              }
+              if (j.driverName == null || j.driverName!.trim().isEmpty) {
+                return false;
+              }
+              final matchDriver = j.driverName!.toLowerCase().contains(driverNameLower) ||
+                  driverNameLower.contains(j.driverName!.toLowerCase());
+              final isActiveStatus = j.status == JobStatus.accepted ||
+                  j.status == JobStatus.arrived ||
+                  j.status == JobStatus.towing;
+              return matchDriver && isActiveStatus;
+            },
+            orElse: () => null,
+          );
+
+          if (adminAssignedMatch != null) {
+            final cleanId = adminAssignedMatch.id.replaceAll('#', '').trim();
+            if (!_completedJobIds.contains(cleanId)) {
+              debugPrint('🎯 [DriverJobService] Found recent admin-assigned tow: ${adminAssignedMatch.id}');
+              _stopCurrentOffer();
+              activeJobNotifier.value = adminAssignedMatch;
+              _startActiveJobTracking(adminAssignedMatch.id);
+              return;
+            }
+          }
+        }
+
+        // 5. Only show truly pending / unassigned customer dispatches created recently (within last 60 mins)
         final pendingJobs = allJobs.where((t) {
+          final cleanId = t.id.replaceAll('#', '').trim();
           final isPending = t.status == JobStatus.pending;
-          final isUnassigned = t.driverName == null || t.driverName!.trim().isEmpty;
+          final isUnassigned = t.driverName == null ||
+              t.driverName!.trim().isEmpty ||
+              t.driverName!.toLowerCase() == 'unassigned';
           final notCurrentActive = activeJob == null || activeJob!.id != t.id;
-          final notCompleted = !completedJobsNotifier.value.any((c) => c.id == t.id);
-          final notCancelled = !_cancelledJobIds.contains(t.id);
+          final notCompleted = !_completedJobIds.contains(cleanId) &&
+              !completedJobsNotifier.value.any((c) => c.id.replaceAll('#', '').trim() == cleanId);
+          final notCancelled = !_cancelledJobIds.contains(t.id) &&
+              !_cancelledJobIds.contains(cleanId);
+          final notDeclinedMax = !_declinedJobIds.contains(t.id) &&
+              !_declinedJobIds.contains(cleanId);
           final isRecent = now.difference(t.createdAt).inMinutes.abs() < 60;
-          return isPending && isUnassigned && notCurrentActive && notCompleted && notCancelled && isRecent;
+          return isPending &&
+              isUnassigned &&
+              notCurrentActive &&
+              notCompleted &&
+              notCancelled &&
+              notDeclinedMax &&
+              isRecent;
         }).toList();
 
-        availableRequestsNotifier.value = pendingJobs;
-        if (pendingJobs.isNotEmpty) {
-          if (selectedRequest == null || !pendingJobs.any((p) => p.id == selectedRequest?.id)) {
-            selectedRequestNotifier.value = pendingJobs.first;
-          }
-        } else {
-          selectedRequestNotifier.value = null;
-        }
+        _cachedPendingJobs = pendingJobs;
+        _evaluatePendingQueue();
       } else {
         // Backend has 0 pending requests: ensure no stale cards or cached jobs are displayed
+        _cachedPendingJobs = [];
+        _stopCurrentOffer();
         availableRequestsNotifier.value = [];
         selectedRequestNotifier.value = null;
       }
@@ -265,8 +375,165 @@ class DriverJobService {
     }
   }
 
+  /// Sequential one-by-one dispatch dispatcher with 5-10s timer and automatic fallbacks
+  void _evaluatePendingQueue() {
+    if (!driver.isOnline || activeJob != null) {
+      _stopCurrentOffer();
+      availableRequestsNotifier.value = [];
+      selectedRequestNotifier.value = null;
+      return;
+    }
+
+    // If an offer is currently ongoing:
+    if (currentIncomingOfferNotifier.value != null) {
+      final currentId = currentIncomingOfferNotifier.value!.id.replaceAll('#', '').trim();
+      final stillExists = _cachedPendingJobs.any(
+        (j) => j.id.replaceAll('#', '').trim() == currentId,
+      );
+      if (!stillExists) {
+        // Job was taken by someone else or cancelled by customer
+        _stopCurrentOffer();
+      } else {
+        // Continue existing active offer countdown & ringing
+        return;
+      }
+    }
+
+    final now = DateTime.now();
+
+    // 1. Look for jobs that are eligible right now (cooldown has passed)
+    final readyJobs = _cachedPendingJobs.where((j) {
+      final cleanId = j.id.replaceAll('#', '').trim();
+      final cd = _jobCooldownUntil[cleanId];
+      return cd == null || !now.isBefore(cd);
+    }).toList();
+
+    if (readyJobs.isNotEmpty) {
+      final nextJob = readyJobs.first;
+      _startIncomingOffer(nextJob);
+      return;
+    }
+
+    // 2. Fallback to same online driver:
+    // If all pending jobs are currently on cooldown (e.g., this driver passed it 2s ago),
+    // wait for the cooldown to expire and re-offer to this online driver!
+    if (_cachedPendingJobs.isNotEmpty) {
+      DateTime? earliest;
+      for (final j in _cachedPendingJobs) {
+        final cleanId = j.id.replaceAll('#', '').trim();
+        final cd = _jobCooldownUntil[cleanId];
+        if (cd != null) {
+          if (earliest == null || cd.isBefore(earliest)) {
+            earliest = cd;
+          }
+        }
+      }
+
+      _cooldownCheckTimer?.cancel();
+      if (earliest != null) {
+        final waitMs = earliest.difference(now).inMilliseconds;
+        final safeWaitMs = waitMs > 0 ? waitMs : 250;
+        _cooldownCheckTimer = Timer(Duration(milliseconds: safeWaitMs), () {
+          _evaluatePendingQueue();
+        });
+      }
+      availableRequestsNotifier.value = [];
+      selectedRequestNotifier.value = null;
+    } else {
+      _stopCurrentOffer();
+      availableRequestsNotifier.value = [];
+      selectedRequestNotifier.value = null;
+    }
+  }
+
+  /// Begins offering an incoming dispatch to the driver one-by-one with ringing audio and 10s timer
+  void _startIncomingOffer(TowJob job) {
+    _stopCurrentOffer();
+
+    currentIncomingOfferNotifier.value = job;
+    availableRequestsNotifier.value = [job];
+    selectedRequestNotifier.value = job;
+
+    _remainingOfferMs = 10000; // 10 seconds timer
+    offerCountdownSecondsNotifier.value = 10;
+    offerTimerProgressNotifier.value = 1.0;
+
+    // Start loud alert ringing sound + rhythmic haptic vibration
+    DriverSoundService.startAlertRingtone();
+
+    _offerCountdownTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (_remainingOfferMs > 100) {
+        _remainingOfferMs -= 100;
+        offerTimerProgressNotifier.value = _remainingOfferMs / 10000.0;
+        offerCountdownSecondsNotifier.value = (_remainingOfferMs / 1000.0).ceil();
+      } else {
+        timer.cancel();
+        _handleOfferTimeoutOrDecline(job, isTimeout: true);
+      }
+    });
+  }
+
+  /// Handles 10-second expiry or explicit decline:
+  /// - Stops ringing audio immediately
+  /// - Passes to next driver or recycles back to same online driver
+  /// - If pass count >= 2, marks for Admin manual dispatch
+  Future<void> _handleOfferTimeoutOrDecline(TowJob job, {bool isTimeout = false}) async {
+    _stopCurrentOffer();
+    await DriverSoundService.playPassSound();
+
+    final cleanId = job.id.replaceAll('#', '').trim();
+    final passCount = (_jobPassCounts[cleanId] ?? 0) + 1;
+    _jobPassCounts[cleanId] = passCount;
+
+    debugPrint(
+      '⏱️ [DriverJobService] Job $cleanId ${isTimeout ? "timed out (10s)" : "declined"}. Pass count: $passCount',
+    );
+
+    if (passCount >= 2) {
+      // Order completed full cycle across drivers without acceptance -> Send to Admin Manual Dispatch!
+      debugPrint('🚨 [DriverJobService] Job $cleanId reached $passCount passes. Forwarding to Admin Manual Dispatch.');
+      _declinedJobIds.add(cleanId);
+      _declinedJobIds.add(job.id);
+      _forwardToAdminDispatch(job);
+    } else {
+      // Cooldown 2.5 seconds, then recycle back to the same online driver if no other drivers take it
+      _jobCooldownUntil[cleanId] = DateTime.now().add(const Duration(milliseconds: 2500));
+    }
+
+    _evaluatePendingQueue();
+  }
+
+  /// Forwards unassigned/timed-out order to Admin portal for manual driver arrangement
+  Future<void> _forwardToAdminDispatch(TowJob job) async {
+    final cleanId = job.id.replaceAll('#', '').trim();
+    final safeJobId = Uri.encodeComponent(cleanId);
+    try {
+      final statusUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/status');
+      await http.put(
+        statusUri,
+        headers: {'content-type': 'application/json'},
+        body: jsonEncode({
+          'status': 'pending_admin_dispatch',
+          'needs_admin_dispatch': true,
+          'driver_name': 'unassigned',
+          'notes': 'Online drivers timed out / passed. Forwarded to Admin for manual dispatch.',
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
+  }
+
+  void _stopCurrentOffer() {
+    _offerCountdownTimer?.cancel();
+    _offerCountdownTimer = null;
+    DriverSoundService.stopAlertRingtone();
+    currentIncomingOfferNotifier.value = null;
+  }
+
   /// Driver accepts a job request (via right-swipe or explicit Accept button)
   Future<void> acceptJob(TowJob job) async {
+    _stopCurrentOffer();
+    await DriverSoundService.playAcceptSound();
+
     await updateDriverGpsLocation();
     var currentPos = driverLocationNotifier.value;
 
@@ -403,11 +670,28 @@ class DriverJobService {
         }
       } catch (_) {}
 
-      // If backend confirms the job was cancelled by customer:
+      // If backend confirms the job was cancelled or completed:
       if (towData != null && updatedFromBackend != null) {
         final backendStatus = towData['status']?.toString().toLowerCase() ?? '';
         final isCancelled = updatedFromBackend.status == JobStatus.cancelled ||
             backendStatus.contains('cancel');
+        final isCompleted = updatedFromBackend.status == JobStatus.completed ||
+            backendStatus.contains('complete');
+
+        if (isCompleted) {
+          debugPrint('🏁 [DriverJobService] Active job $jobId completed in backend. Ending tracking loop.');
+          _activeTrackingTimer?.cancel();
+          _activeTrackingTimer = null;
+
+          _completedJobIds.add(current.id);
+          _completedJobIds.add(cleanJobId);
+          _completedJobIds.add('#$cleanJobId');
+          _saveCompletedJobIds();
+
+          activeJobNotifier.value = null;
+          startDispatchPolling();
+          return;
+        }
 
         if (isCancelled) {
           debugPrint('🚨 [DriverJobService] Customer cancelled active job $jobId detected by tracking loop');
@@ -502,18 +786,15 @@ class DriverJobService {
 
   /// Driver declines/rejects a job request (via left-swipe or explicit Decline button)
   void declineJob(TowJob job) {
-    final cleanId = job.id.replaceAll('#', '').trim();
-    final updatedList = List<TowJob>.from(availableRequestsNotifier.value)
-      ..removeWhere((j) => j.id.replaceAll('#', '').trim() == cleanId);
-    availableRequestsNotifier.value = updatedList;
-
-    if (selectedRequest?.id.replaceAll('#', '').trim() == cleanId) {
-      selectedRequestNotifier.value = updatedList.isNotEmpty ? updatedList.first : null;
-    }
+    _handleOfferTimeoutOrDecline(job, isTimeout: false);
   }
 
   /// Clears available requests
   void resetDemoRequests() {
+    _stopCurrentOffer();
+    _jobPassCounts.clear();
+    _jobCooldownUntil.clear();
+    _declinedJobIds.clear();
     availableRequestsNotifier.value = [];
     selectedRequestNotifier.value = null;
   }
@@ -525,6 +806,7 @@ class DriverJobService {
     JobStatus nextStatus;
     switch (current.status) {
       case JobStatus.pending:
+      case JobStatus.pendingAdminDispatch:
       case JobStatus.accepted:
         nextStatus = JobStatus.arrived;
         break;
@@ -592,8 +874,17 @@ class DriverJobService {
       await prefs.setInt('driver_total_tows', newTotalTows);
     } catch (_) {}
 
-    // 1. Immediately update backend status to completed BEFORE clearing activeJob
+    // 1. Immediately record in completed set & persist to storage
     final cleanId = job.id.replaceAll('#', '').trim();
+    _completedJobIds.add(cleanId);
+    _completedJobIds.add(job.id);
+    _completedJobIds.add('#$cleanId');
+    _saveCompletedJobIds();
+
+    // 2. Clear active job immediately
+    activeJobNotifier.value = null;
+
+    // 3. Immediately update backend status to completed
     final safeJobId = Uri.encodeComponent(cleanId);
     try {
       final uri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/status');
@@ -604,7 +895,6 @@ class DriverJobService {
       ).timeout(const Duration(seconds: 4));
     } catch (_) {}
 
-    activeJobNotifier.value = null;
     startDispatchPolling();
   }
 }

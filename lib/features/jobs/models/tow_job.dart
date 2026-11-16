@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../core/services/driver_pricing_service.dart';
 
 enum JobStatus {
   pending,
+  pendingAdminDispatch,
   accepted,
   arrived,
   towing,
@@ -12,6 +14,8 @@ enum JobStatus {
     switch (this) {
       case JobStatus.pending:
         return 'Dispatch Request';
+      case JobStatus.pendingAdminDispatch:
+        return 'Needs Admin Dispatch';
       case JobStatus.accepted:
         return 'En Route to Pickup';
       case JobStatus.arrived:
@@ -29,6 +33,8 @@ enum JobStatus {
     switch (this) {
       case JobStatus.pending:
         return const Color(0xFFF59E0B);
+      case JobStatus.pendingAdminDispatch:
+        return const Color(0xFFF97316);
       case JobStatus.accepted:
         return const Color(0xFF2563EB);
       case JobStatus.arrived:
@@ -70,6 +76,13 @@ class TowJob {
   final double estimatedPayout;
   final double basePayout;
   final double mileagePayout;
+  final double perMileRate;
+  final double perKmRate;
+  final double distanceMiles;
+  final double distanceKm;
+  final double billableMiles;
+  final double billableKm;
+  final String rateFormula;
   final double hazardFee;
   final double specialEquipmentFee;
   final String etaOrDuration;
@@ -122,6 +135,13 @@ class TowJob {
     this.estimatedPayout = 145.00,
     this.basePayout = 75.00,
     this.mileagePayout = 40.00,
+    this.perMileRate = 4.50,
+    this.perKmRate = 2.80,
+    this.distanceMiles = 11.1,
+    this.distanceKm = 17.9,
+    this.billableMiles = 6.1,
+    this.billableKm = 9.8,
+    this.rateFormula = '6.1 mi (9.8 km) @ \$4.50/mi (\$2.80/km)',
     this.hazardFee = 20.00,
     this.specialEquipmentFee = 10.00,
     required this.etaOrDuration,
@@ -229,6 +249,13 @@ class TowJob {
       estimatedPayout: estimatedPayout ?? this.estimatedPayout,
       basePayout: basePayout,
       mileagePayout: mileagePayout,
+      perMileRate: perMileRate,
+      perKmRate: perKmRate,
+      distanceMiles: distanceMiles,
+      distanceKm: distanceKm,
+      billableMiles: billableMiles,
+      billableKm: billableKm,
+      rateFormula: rateFormula,
       hazardFee: hazardFee,
       specialEquipmentFee: specialEquipmentFee,
       etaOrDuration: etaOrDuration ?? this.etaOrDuration,
@@ -244,6 +271,7 @@ class TowJob {
   factory TowJob.fromJson(Map<String, dynamic> json) {
     JobStatus parseStatus(dynamic s) {
       final str = s?.toString().toLowerCase() ?? 'pending';
+      if (str.contains('admin')) return JobStatus.pendingAdminDispatch;
       if (str.contains('complete')) return JobStatus.completed;
       if (str.contains('cancel')) return JobStatus.cancelled;
       if (str.contains('tow')) return JobStatus.towing;
@@ -454,6 +482,13 @@ class TowJob {
       resolvedDrop = lookupCoimbatoreHubName(dLat, dLng);
     }
 
+    final pricing = DriverPricingService().getBreakdown(
+      serviceTitle: serviceTitle,
+      vehicleType: vehicleCategory,
+      distanceMiles: (json['distance_miles'] as num?)?.toDouble() ?? 11.1,
+      totalCostString: totalCostStr,
+    );
+
     return TowJob(
       id: json['id']?.toString() ?? 'TW-${DateTime.now().millisecondsSinceEpoch % 100000}',
       serviceTitle: serviceTitle,
@@ -485,9 +520,16 @@ class TowJob {
       customerPhone: customerPhone.isNotEmpty ? customerPhone : '+1 (555) 019-2831',
       customerRating: (json['customer_rating'] as num?)?.toDouble() ?? 4.95,
       totalCost: totalCostStr,
-      estimatedPayout: payout,
-      basePayout: double.parse((payout * 0.6).toStringAsFixed(2)),
-      mileagePayout: double.parse((payout * 0.4).toStringAsFixed(2)),
+      estimatedPayout: pricing.totalCost,
+      basePayout: pricing.baseFee,
+      mileagePayout: pricing.distanceCost,
+      perMileRate: pricing.perMileRate,
+      perKmRate: pricing.perKmRate,
+      distanceMiles: pricing.distanceMiles,
+      distanceKm: pricing.distanceKm,
+      billableMiles: pricing.billableMiles,
+      billableKm: pricing.billableKm,
+      rateFormula: pricing.rateFormula,
       hazardFee: (json['hazard_fee'] as num?)?.toDouble() ?? 0.00,
       specialEquipmentFee: (json['special_equipment_fee'] as num?)?.toDouble() ?? 0.00,
       etaOrDuration: json['etaOrDuration'] ?? json['eta_or_duration'] ?? '6 min ETA (1.8 mi)',

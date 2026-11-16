@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/constants/driver_colors.dart';
+import '../../../core/services/driver_sound_service.dart';
 import '../models/tow_job.dart';
 import '../services/driver_job_service.dart';
 
@@ -14,17 +15,19 @@ class IncomingJobDialog extends StatefulWidget {
 }
 
 class _IncomingJobDialogState extends State<IncomingJobDialog> {
-  int _secondsLeft = 30;
+  int _secondsLeft = 10;
   Timer? _countdownTimer;
 
   @override
   void initState() {
     super.initState();
+    DriverSoundService.startAlertRingtone();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_secondsLeft > 1) {
         setState(() => _secondsLeft--);
       } else {
         _countdownTimer?.cancel();
+        DriverSoundService.stopAlertRingtone();
         if (mounted) {
           Navigator.of(context, rootNavigator: true).pop();
         }
@@ -36,12 +39,13 @@ class _IncomingJobDialogState extends State<IncomingJobDialog> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    DriverSoundService.stopAlertRingtone();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final progress = _secondsLeft / 30.0;
+    final progress = _secondsLeft / 10.0;
 
     return Container(
       constraints: BoxConstraints(
@@ -188,6 +192,98 @@ class _IncomingJobDialogState extends State<IncomingJobDialog> {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Fare & Distance (KM/Miles) Breakdown
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: DriverColors.greenTint,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: DriverColors.greenBorder),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${widget.job.serviceTitle} Base (Fixed)',
+                            style: const TextStyle(
+                              color: DriverColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '\$${widget.job.basePayout.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: DriverColors.textNavy,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Distance (${widget.job.billableMiles.toStringAsFixed(1)} mi / ${widget.job.billableKm.toStringAsFixed(1)} km @ \$${widget.job.perMileRate.toStringAsFixed(2)}/mi / \$${widget.job.perKmRate.toStringAsFixed(2)}/km)',
+                            style: const TextStyle(
+                              color: DriverColors.textSecondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '\$${widget.job.mileagePayout.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: DriverColors.textNavy,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4),
+                      child: Divider(height: 1, color: DriverColors.greenBorder),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'TOTAL ESTIMATED PAYOUT',
+                          style: TextStyle(
+                            color: DriverColors.emeraldDark,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Text(
+                          widget.job.payoutFormatted,
+                          style: const TextStyle(
+                            color: DriverColors.emeraldDark,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
                       ],

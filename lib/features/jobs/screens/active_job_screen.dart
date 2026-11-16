@@ -6,6 +6,7 @@ import '../../../core/constants/driver_colors.dart';
 import '../models/tow_job.dart';
 import '../services/driver_job_service.dart';
 import '../widgets/customer_cancelled_dialog.dart';
+import '../widgets/slide_to_action_button.dart';
 
 class ActiveJobScreen extends StatefulWidget {
   final TowJob job;
@@ -987,13 +988,131 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 12),
+
+                        // Itemized Fare & KM/Miles Breakdown Card for Driver
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFBBF7D0)),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '${job.serviceTitle} Base (Fixed)',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF166534),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '\$${job.basePayout.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: DriverColors.textNavy,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Distance (${job.billableMiles.toStringAsFixed(1)} mi / ${job.billableKm.toStringAsFixed(1)} km @ \$${job.perMileRate.toStringAsFixed(2)}/mi / \$${job.perKmRate.toStringAsFixed(2)}/km)',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF15803D),
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    '\$${job.mileagePayout.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: DriverColors.textNavy,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 6),
+                                child: Divider(height: 1, color: Color(0xFFBBF7D0)),
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'TOTAL ESTIMATED PAYOUT',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF166534),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  Text(
+                                    job.payoutFormatted,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF15803D),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                         const SizedBox(height: 14),
 
-                        // Main Step Progression Action Button
-                        SizedBox(
-                          height: 52,
-                          child: ElevatedButton(
-                            onPressed: () async {
+                        // Main Step Progression Action Button / Completed State
+                        if (_isCompleting || job.status == JobStatus.completed)
+                          Container(
+                            width: double.infinity,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: DriverColors.greenTint,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: DriverColors.greenBorder),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.check_circle_rounded, color: DriverColors.emeraldDark, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Trip Completed Successfully',
+                                  style: TextStyle(
+                                    color: DriverColors.emeraldDark,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else ...[
+                          SlideToActionButton(
+                            key: ValueKey(job.status),
+                            label: _getActionButtonText(job.status),
+                            baseColor: _getActionColorForStatus(job.status),
+                            icon: Icons.arrow_forward_rounded,
+                            onSlideComplete: () async {
                               final previousStatus = job.status;
                               if (previousStatus == JobStatus.towing) {
                                 _isCompleting = true;
@@ -1009,45 +1128,31 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                                 }
                               }
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _getActionColorForStatus(job.status),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                            child: Text(
-                              _getActionButtonText(job.status),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
                           ),
-                        ),
 
-                        // Driver Cancel Job Action
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          height: 46,
-                          child: OutlinedButton.icon(
-                            onPressed: () => _confirmCancelJob(context, job),
-                            icon: const Icon(Icons.close_rounded, color: DriverColors.alertRed, size: 18),
-                            label: const Text(
-                              'Cancel Job',
-                              style: TextStyle(
-                                color: DriverColors.alertRed,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14.5,
+                          // Driver Cancel Job Action
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 46,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _confirmCancelJob(context, job),
+                              icon: const Icon(Icons.close_rounded, color: DriverColors.alertRed, size: 18),
+                              label: const Text(
+                                'Cancel Job',
+                                style: TextStyle(
+                                  color: DriverColors.alertRed,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14.5,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFFFECACA), width: 1.5),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                backgroundColor: const Color(0xFFFEF2F2),
                               ),
                             ),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFFFECACA), width: 1.5),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              backgroundColor: const Color(0xFFFEF2F2),
-                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   );
@@ -1066,6 +1171,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   IconData _getIconForStatus(JobStatus status) {
     switch (status) {
       case JobStatus.pending:
+      case JobStatus.pendingAdminDispatch:
       case JobStatus.accepted:
         return Icons.navigation_rounded;
       case JobStatus.arrived:
@@ -1082,6 +1188,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   Color _getActionColorForStatus(JobStatus status) {
     switch (status) {
       case JobStatus.pending:
+      case JobStatus.pendingAdminDispatch:
       case JobStatus.accepted:
         return DriverColors.electricBlue;
       case JobStatus.arrived:
@@ -1098,12 +1205,13 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   String _getActionButtonText(JobStatus status) {
     switch (status) {
       case JobStatus.pending:
+      case JobStatus.pendingAdminDispatch:
       case JobStatus.accepted:
         return 'Slide When Arrived at Scene';
       case JobStatus.arrived:
-        return 'Confirm Hooked & Begin Tow';
+        return 'Slide to Confirm Hooked';
       case JobStatus.towing:
-        return 'Complete Drop-Off & Collect ${widget.job.payoutFormatted}';
+        return 'Slide to Complete Drop-Off (${widget.job.payoutFormatted})';
       case JobStatus.completed:
         return 'Job Completed Successfully';
       case JobStatus.cancelled:
@@ -1118,16 +1226,21 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(18),
+              width: 68,
+              height: 68,
               decoration: const BoxDecoration(
-                color: DriverColors.greenTint,
+                color: Color(0xFFDCFCE7),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle, color: DriverColors.emeraldDark, size: 54),
+              child: const Center(
+                child: Icon(Icons.check_rounded, color: Color(0xFF16A34A), size: 38),
+              ),
             ),
             const SizedBox(height: 18),
             const Text(
@@ -1135,14 +1248,20 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               style: TextStyle(
                 color: DriverColors.textNavy,
                 fontSize: 22,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.2,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'You earned ${job.payoutFormatted} for this roadside recovery.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: DriverColors.textSecondary, fontSize: 14),
+              style: const TextStyle(
+                color: DriverColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                height: 1.3,
+              ),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -1154,11 +1273,19 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   Navigator.of(context).popUntil((route) => route.isFirst); // back to driver home
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: DriverColors.emeraldGreen,
+                  backgroundColor: const Color(0xFF10B981),
                   foregroundColor: Colors.white,
+                  elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text('Back to Dispatch Queue', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Back to Dispatch',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    letterSpacing: 0.2,
+                  ),
+                ),
               ),
             ),
           ],

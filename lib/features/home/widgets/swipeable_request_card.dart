@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/driver_sound_service.dart';
 import '../../jobs/models/tow_job.dart';
+import '../../jobs/services/driver_job_service.dart';
 
 class SwipeableRequestCard extends StatefulWidget {
   final TowJob job;
@@ -605,44 +606,69 @@ class _SwipeableRequestCardState extends State<SwipeableRequestCard>
                     // 3. Clean Polished Action Buttons (52px Height)
                     Row(
                       children: [
-                        // Compact Icon-Only Pass Button (52x52)
-                        SizedBox(
-                          width: 52,
-                          height: 52,
-                          child: Material(
-                            color: Colors.white,
-                            shape: const CircleBorder(),
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              splashColor: const Color(0xFFF1F5F9),
-                              highlightColor: const Color(0xFFF8FAFC),
-                              onTap: () => _commitSwipe(isAccept: false),
-                              child: Ink(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: const Color(0xFFCBD5E1),
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
+                        // Compact Icon-Only Pass Button (52x52) with Circular Timing Progress Border (No Number Count)
+                        ValueListenableBuilder<double>(
+                          valueListenable: DriverJobService().offerTimerProgressNotifier,
+                          builder: (context, progress, _) {
+                            final barColor = progress <= 0.3
+                                ? const Color(0xFFEF4444)
+                                : (progress <= 0.5 ? const Color(0xFFF59E0B) : const Color(0xFF2563EB));
+
+                            return SizedBox(
+                              width: 52,
+                              height: 52,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Circular Progress Border around close button
+                                  SizedBox(
+                                    width: 52,
+                                    height: 52,
+                                    child: CircularProgressIndicator(
+                                      value: progress.clamp(0.0, 1.0),
+                                      strokeWidth: 3.2,
+                                      backgroundColor: const Color(0xFFE2E8F0),
+                                      valueColor: AlwaysStoppedAnimation<Color>(barColor),
                                     ),
-                                  ],
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.close_rounded,
-                                    color: Color(0xFF64748B),
-                                    size: 24,
                                   ),
-                                ),
+
+                                  // Pass (Close "X") Button Centered Inside
+                                  Material(
+                                    color: Colors.white,
+                                    shape: const CircleBorder(),
+                                    child: InkWell(
+                                      customBorder: const CircleBorder(),
+                                      splashColor: const Color(0xFFFEE2E2),
+                                      highlightColor: const Color(0xFFFEF2F2),
+                                      onTap: () => _commitSwipe(isAccept: false),
+                                      child: Container(
+                                        width: 43,
+                                        height: 43,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.close_rounded,
+                                            color: Color(0xFF64748B),
+                                            size: 22,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ),
+                            );
+                          },
                         ),
                         const SizedBox(width: 12),
 

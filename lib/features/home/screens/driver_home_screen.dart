@@ -709,8 +709,15 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   return ValueListenableBuilder<TowJob?>(
                     valueListenable: _jobService.selectedRequestNotifier,
                     builder: (context, selectedJob, _) {
+                      final hasActiveJob = isOnline &&
+                          activeJob != null &&
+                          activeJob.status != JobStatus.completed &&
+                          activeJob.status != JobStatus.cancelled;
+
                       final effectiveSelected = isOnline
-                          ? (activeJob ?? (selectedJob ?? (visibleRequests.isNotEmpty ? visibleRequests.first : null)))
+                          ? (hasActiveJob
+                              ? activeJob
+                              : (selectedJob ?? (visibleRequests.isNotEmpty ? visibleRequests.first : null)))
                           : null;
 
                       return Stack(
@@ -721,7 +728,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                             builder: (context, ratio, _) {
                               return Positioned.fill(
                                 child: DriverMap(
-                                  requests: activeJob != null ? [activeJob] : visibleRequests,
+                                  requests: hasActiveJob ? [activeJob] : visibleRequests,
                                   selectedRequest: effectiveSelected,
                                   sheetRatio: ratio,
                                   isOnline: isOnline,
@@ -747,7 +754,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                           ),
 
                           // 2. Persistent Floating Live Active Job Banner on Map
-                          if (activeJob != null)
+                          if (hasActiveJob)
                             Positioned(
                               top: MediaQuery.of(context).padding.top + 70,
                               left: 16,
@@ -906,7 +913,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                                           // The Cards: Active Job In-Progress Card OR Available Dispatch Stack
                                           Padding(
                                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                                            child: activeJob != null
+                                            child: hasActiveJob
                                                 ? _buildActiveJobCard(activeJob)
                                                 : CenteredLayeredCardStack(
                                                     requests: visibleRequests,
@@ -950,7 +957,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                                           _buildPerformanceSection(),
 
                                           // B) Nearby Dispatches in Queue (Only shown when online and no active job)
-                                          if (isOnline && activeJob == null && requests.length > 1)
+                                          if (isOnline && !hasActiveJob && requests.length > 1)
                                             _buildQueueSection(requests),
 
                                           // C) Carrier & Equipment Checklist
@@ -977,6 +984,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   Widget _buildActiveJobCard(TowJob job) {
+    if (job.status == JobStatus.completed || job.status == JobStatus.cancelled) {
+      return const SizedBox.shrink();
+    }
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),

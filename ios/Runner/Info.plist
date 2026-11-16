@@ -66,5 +66,26 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Location Permissions (Required for receiving jobs & live navigation) -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Towing Driver requires your location to receive nearby dispatch alerts, calculate routing to stranded motorists, and navigate to the scene.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Towing Driver requires background location access to broadcast your vehicle position to dispatch and the customer while en route or towing.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Towing Driver requires location access even when the app is in the background to track active rescue missions.</string>
+
+	<!-- Camera & Photos Permissions -->
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is needed to capture photos of the vehicle condition at pickup and delivery.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Photo library access is needed to upload incident or inspection photos.</string>
+
+	<!-- Background Modes for Driver Real-Time Dispatch -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>fetch</string>
+		<string>audio</string>
+	</array>
 </dict>
 </plist>

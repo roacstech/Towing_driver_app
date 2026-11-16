@@ -666,8 +666,11 @@ class TripDetailsScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _buildPayoutRow('Base Hookup & Dispatch', '\$${job.basePayout.toStringAsFixed(2)}'),
-                      _buildPayoutRow('Mileage Fare (${job.distanceToPickup})', '\$${job.mileagePayout.toStringAsFixed(2)}'),
+                      _buildPayoutRow('${job.serviceTitle} Base (Admin Fixed)', '\$${job.basePayout.toStringAsFixed(2)}'),
+                      _buildPayoutRow(
+                        'Distance Fare (${job.billableMiles.toStringAsFixed(1)} mi / ${job.billableKm.toStringAsFixed(1)} km @ \$${job.perMileRate.toStringAsFixed(2)}/mi / \$${job.perKmRate.toStringAsFixed(2)}/km)',
+                        '\$${job.mileagePayout.toStringAsFixed(2)}',
+                      ),
                       if (job.hazardFee > 0)
                         _buildPayoutRow('Highway Safety / Hazard Surcharge', '+\$${job.hazardFee.toStringAsFixed(2)}', isHighlight: true),
                       if (job.specialEquipmentFee > 0)

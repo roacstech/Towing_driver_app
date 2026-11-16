@@ -33,88 +33,47 @@ class CenteredLayeredCardStack extends StatelessWidget {
       return _buildEmptyState();
     }
 
-    final topJob = requests.first;
-    final hasSecond = requests.length > 1;
+    // Strictly one request at a time
+    final activeOffer = requests.first;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Layered Stack with subtle deck depth
-        Stack(
-          alignment: Alignment.topCenter,
-          clipBehavior: Clip.none,
-          children: [
-            // Underneath peeking card (subtle 5px lip behind active card)
-            if (hasSecond)
-              Positioned(
-                top: -5,
-                left: 12,
-                right: 12,
-                bottom: 5,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.94),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: const Color(0xFFE2E8F0),
-                      width: 1.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, -2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            // Foreground Active Card
-            SwipeableRequestCard(
-              key: ValueKey(topJob.id),
-              job: topJob,
-              onAccept: () => onAccept(topJob),
-              onReject: () => onReject(topJob),
-              onTap: () => onTapJob(topJob),
-            ),
-          ],
+        // Foreground Active One-by-One Offer Card
+        SwipeableRequestCard(
+          key: ValueKey(activeOffer.id),
+          job: activeOffer,
+          onAccept: () => onAccept(activeOffer),
+          onReject: () => onReject(activeOffer),
+          onTap: () => onTapJob(activeOffer),
         ),
 
         const SizedBox(height: 10),
 
-        // Carousel Queue Indicator & Swipe Instructions
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(
-                requests.length > 5 ? 5 : requests.length,
-                (index) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                  width: index == 0 ? 14 : 5,
-                  height: 4.5,
-                  decoration: BoxDecoration(
-                    color: index == 0
-                        ? const Color(0xFF2563EB)
-                        : const Color(0xFFCBD5E1),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
+        // Swipe Affordance Helper (Clean without number countdown)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.swipe_rounded, size: 14, color: Color(0xFF64748B)),
+              SizedBox(width: 6),
+              Text(
+                '← Swipe Left to Pass  |  Swipe Right to Accept →',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF64748B),
+                  letterSpacing: 0.1,
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              '← Swipe to Pass / Accept →',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF94A3B8),
-                letterSpacing: 0.1,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
