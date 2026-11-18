@@ -1,0 +1,106 @@
+{
+  "project_info": {
+    "project_number": "31225649435",
+    "project_id": "towing-app-86e42",
+    "storage_bucket": "towing-app-86e42.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:31225649435:android:aa3e90f9740903df731bbe",
+        "android_client_info": {
+          "package_name": "com.roacs.towing.towing_driver"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "31225649435-2nt9gu4ca2uuecg3ea53f0f29apvco5m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.roacs.towing.towing_driver",
+            "certificate_hash": "d24110b1380f79bd8a88b4d1789e953e4574868b"
+          }
+        },
+        {
+          "client_id": "31225649435-rqd8gvrjkc6gi0t12aple6hl8n4mcj9b.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0YNR35Ljv3D0hKbBH8G3wkkQwNeoVuq8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "31225649435-rqd8gvrjkc6gi0t12aple6hl8n4mcj9b.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "31225649435-m488lg7jho2beqif1lv9hqj2lk1defi2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.roacs.towingCustomer"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:31225649435:android:1d2f97d53848bb01731bbe",
+        "android_client_info": {
+          "package_name": "com.roacs.towing_customer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "31225649435-2240jtgbq18f9c3fnkasi4ffqi38b2gj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.roacs.towing_customer",
+            "certificate_hash": "d24110b1380f79bd8a88b4d1789e953e4574868b"
+          }
+        },
+        {
+          "client_id": "31225649435-p0e0hoso8v9smu38l83o85ee3dtft2gl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.roacs.towing_customer",
+            "certificate_hash": "1bb00fc73e7d8cab89beef6a82137a884c21aa2b"
+          }
+        },
+        {
+          "client_id": "31225649435-rqd8gvrjkc6gi0t12aple6hl8n4mcj9b.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0YNR35Ljv3D0hKbBH8G3wkkQwNeoVuq8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "31225649435-rqd8gvrjkc6gi0t12aple6hl8n4mcj9b.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "31225649435-m488lg7jho2beqif1lv9hqj2lk1defi2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.roacs.towingCustomer"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

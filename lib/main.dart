@@ -6,9 +6,16 @@ import 'features/auth/screens/driver_login_screen.dart';
 import 'features/auth/services/driver_auth_service.dart';
 import 'features/navigation/screens/driver_main_shell.dart';
 import 'features/splash/screens/splash_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+   // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Premium Light Theme system bars: crisp white navigation and dark status icons
   SystemChrome.setSystemUIOverlayStyle(

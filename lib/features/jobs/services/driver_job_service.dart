@@ -74,6 +74,25 @@ class DriverJobService {
   final Map<String, DateTime> _jobCooldownUntil = <String, DateTime>{};
   final Set<String> _declinedJobIds = <String>{};
   List<TowJob> _cachedPendingJobs = <TowJob>[];
+  int _lastHeartbeatMs = 0;
+
+  Future<void> _sendDriverHeartbeat(double lat, double lng, {bool isOnline = true}) async {
+    try {
+      final profileUri = Uri.parse(ApiConfig.profileEndpoint);
+      await http.put(
+        profileUri,
+        headers: {'content-type': 'application/json'},
+        body: jsonEncode({
+          'email': driver.email,
+          'name': driver.name,
+          'role': 'driver',
+          'current_lat': lat,
+          'current_lng': lng,
+          'is_online': isOnline,
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
+  }
 
   Future<void> init() async {
     try {
@@ -162,6 +181,10 @@ class DriverJobService {
     } catch (_) {}
 
     driverNotifier.value = driver.copyWith(isOnline: online);
+
+    // Broadcast online status to backend immediately
+    final pos = driverLocationNotifier.value;
+    _sendDriverHeartbeat(pos.latitude, pos.longitude, isOnline: online);
 
     if (online) {
       startDispatchPolling();
