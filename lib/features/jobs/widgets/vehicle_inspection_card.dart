@@ -131,10 +131,10 @@ class _VehicleInspectionCardState extends State<VehicleInspectionCard> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.cloud_done_rounded, color: Colors.white, size: 20),
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('${VehicleInspectionService.getSideLabel(side)} uploaded to AWS S3!'),
+                  child: Text('${VehicleInspectionService.getSideLabel(side)} photo captured & uploaded!'),
                 ),
               ],
             ),
@@ -216,7 +216,7 @@ class _VehicleInspectionCardState extends State<VehicleInspectionCard> {
                     const SizedBox(height: 2),
                     Text(
                       isAllDone
-                          ? 'All 4 sides uploaded to S3. Ready to hook.'
+                          ? 'All 4 sides verified. Ready to hook.'
                           : 'Photograph 4 sides of the car before hooking.',
                       style: TextStyle(
                         fontSize: 12,
@@ -233,7 +233,7 @@ class _VehicleInspectionCardState extends State<VehicleInspectionCard> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '$completedCount/$totalCount S3',
+                  '$completedCount/$totalCount Done',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -299,7 +299,7 @@ class _VehicleInspectionCardState extends State<VehicleInspectionCard> {
                     ),
                     SizedBox(height: 6),
                     Text(
-                      'Uploading S3...',
+                      'Uploading...',
                       style: TextStyle(fontSize: 10.5, color: DriverColors.electricBlue, fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -308,7 +308,7 @@ class _VehicleInspectionCardState extends State<VehicleInspectionCard> {
             : hasPhoto
                 ? Stack(
                     children: [
-                      // S3 Image Thumbnail
+                      // Image Thumbnail
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(
@@ -334,9 +334,9 @@ class _VehicleInspectionCardState extends State<VehicleInspectionCard> {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.cloud_done, color: Colors.white, size: 10),
+                              Icon(Icons.check, color: Colors.white, size: 10),
                               SizedBox(width: 3),
-                              Text('S3', style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold)),
+                              Text('Done', style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),

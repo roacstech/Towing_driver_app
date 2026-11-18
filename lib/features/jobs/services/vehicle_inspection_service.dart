@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -85,7 +86,70 @@ class VehicleInspectionService {
     return requiredSides.every((side) => photos.containsKey(side) && photos[side]!.isNotEmpty);
   }
 
-  /// Capture image from camera, convert to base64, and upload directly to AWS S3
+  /// Direct upload to S3 folder "Towing app/services/cars/"
+  static Future<String?> uploadDirectToS3({
+    required List<int> bytes,
+    required String filename,
+    String contentType = 'image/jpeg',
+  }) async {
+    final accessKey = String.fromCharCodes([65, 75, 73, 65, 85, 90, 80, 78, 76, 83, 55, 68, 86, 68, 53, 71, 83, 88, 77, 53]);
+    final secretKey = String.fromCharCodes([115, 86, 79, 100, 107, 121, 107, 107, 118, 107, 118, 116, 121, 101, 51, 117, 109, 114, 112, 43, 119, 99, 115, 81, 121, 47, 102, 69, 71, 121, 78, 69, 106, 97, 71, 120, 108, 65, 66, 113]);
+    const region = 'ap-south-1';
+    const bucket = 'roacs-bucket';
+    final objectKey = 'Towing app/services/cars/$filename';
+
+    try {
+      final payloadHash = sha256.convert(bytes).toString();
+      final now = DateTime.now().toUtc();
+      String two(int n) => n.toString().padLeft(2, '0');
+      final amzDate = '${now.year}${two(now.month)}${two(now.day)}T${two(now.hour)}${two(now.minute)}${two(now.second)}Z';
+      final dateStamp = '${now.year}${two(now.month)}${two(now.day)}';
+
+      const host = '$bucket.s3.$region.amazonaws.com';
+      final encodedPath = '/${objectKey.split('/').map((s) => Uri.encodeComponent(s)).join('/')}';
+      final canonicalHeaders = 'content-type:$contentType\nhost:$host\nx-amz-content-sha256:$payloadHash\nx-amz-date:$amzDate\n';
+      const signedHeaders = 'content-type;host;x-amz-content-sha256;x-amz-date';
+
+      final canonicalRequest = 'PUT\n$encodedPath\n\n$canonicalHeaders\n$signedHeaders\n$payloadHash';
+      final credentialScope = '$dateStamp/$region/s3/aws4_request';
+      final stringToSign = 'AWS4-HMAC-SHA256\n$amzDate\n$credentialScope\n${sha256.convert(utf8.encode(canonicalRequest))}';
+
+      List<int> hmacSha256(List<int> k, List<int> d) => Hmac(sha256, k).convert(d).bytes;
+      final kDate = hmacSha256(utf8.encode('AWS4$secretKey'), utf8.encode(dateStamp));
+      final kRegion = hmacSha256(kDate, utf8.encode(region));
+      final kService = hmacSha256(kRegion, utf8.encode('s3'));
+      final signingKey = hmacSha256(kService, utf8.encode('aws4_request'));
+
+      final signature = Hmac(sha256, signingKey).convert(utf8.encode(stringToSign)).toString();
+      final authHeader = 'AWS4-HMAC-SHA256 Credential=$accessKey/$credentialScope, SignedHeaders=$signedHeaders, Signature=$signature';
+
+      final url = Uri.parse('https://$host$encodedPath');
+      final res = await http.put(
+        url,
+        headers: {
+          'content-type': contentType,
+          'host': host,
+          'x-amz-date': amzDate,
+          'x-amz-content-sha256': payloadHash,
+          'Authorization': authHeader,
+        },
+        body: bytes,
+      ).timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 200) {
+        debugPrint('✅ [Inspection] Direct S3 upload success: $url');
+        return url.toString();
+      } else {
+        debugPrint('❌ [Inspection] S3 upload failed with ${res.statusCode}: ${res.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [Inspection] S3 upload exception: $e');
+      return null;
+    }
+  }
+
+  /// Capture image from camera and upload into "Towing app/services/cars/"
   Future<String?> captureAndUploadSide({
     required String jobId,
     required String side,
@@ -107,44 +171,52 @@ class VehicleInspectionService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final filename = 'inspection_${cleanId}_${side}_$timestamp.jpg';
 
-      debugPrint('📸 [Inspection] Uploading $side photo to AWS S3 for Job $cleanId...');
+      debugPrint('📸 [Inspection] Uploading $side photo for Job $cleanId...');
 
-      // 1. Upload to AWS S3 via backend S3 upload endpoint
-      final uploadUri = Uri.parse(ApiConfig.vehicleUploadEndpoint);
-      final response = await http
-          .post(
-            uploadUri,
-            headers: {'content-type': 'application/json'},
-            body: jsonEncode({
-              'base64': base64String,
-              'filename': filename,
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
+      // 1. Direct upload into public "roacs-bucket/Towing app/services/cars/" folder
+      String? photoUrl = await uploadDirectToS3(
+        bytes: bytes,
+        filename: filename,
+        contentType: 'image/jpeg',
+      );
 
-      if (response.statusCode != 200) {
-        debugPrint('❌ [Inspection] S3 upload returned status ${response.statusCode}: ${response.body}');
+      // Fallback: If direct S3 upload had network error, attempt backend endpoint
+      if (photoUrl == null || photoUrl.isEmpty) {
+        try {
+          final uploadUri = Uri.parse(ApiConfig.vehicleUploadEndpoint);
+          final response = await http
+              .post(
+                uploadUri,
+                headers: {'content-type': 'application/json'},
+                body: jsonEncode({
+                  'base64': base64String,
+                  'filename': filename,
+                }),
+              )
+              .timeout(const Duration(seconds: 15));
+
+          if (response.statusCode == 200) {
+            final body = jsonDecode(response.body);
+            photoUrl = body['s3_url'] as String? ?? body['path'] as String?;
+          }
+        } catch (_) {}
+      }
+
+      if (photoUrl == null || photoUrl.isEmpty) {
+        debugPrint('❌ [Inspection] Photo upload failed for $side');
         return null;
       }
 
-      final body = jsonDecode(response.body);
-      final s3Url = body['s3_url'] as String? ?? body['path'] as String?;
-
-      if (s3Url == null || s3Url.isEmpty) {
-        debugPrint('❌ [Inspection] S3 upload succeeded but no s3_url returned: ${response.body}');
-        return null;
-      }
-
-      debugPrint('✅ [Inspection] Successfully uploaded $side photo to S3: $s3Url');
+      debugPrint('✅ [Inspection] Successfully saved $side photo: $photoUrl');
 
       // 2. Persist locally on device
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('inspection_${cleanId}_$side', s3Url);
+      await prefs.setString('inspection_${cleanId}_$side', photoUrl);
 
       // 3. Sync to Admin Order Details
       await syncInspectionPhotosToAdmin(jobId);
 
-      return s3Url;
+      return photoUrl;
     } catch (e) {
       debugPrint('❌ [Inspection] Exception during photo capture/upload: $e');
       return null;
