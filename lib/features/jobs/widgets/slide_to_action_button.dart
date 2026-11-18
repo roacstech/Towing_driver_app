@@ -37,15 +37,15 @@ class _SlideToActionButtonState extends State<SlideToActionButton>
   late AnimationController _shimmerController;
 
   static const double _thumbMargin = 4.0;
-  // Forgiving 35% threshold so the driver never has to slide multiple times
-  static const double _completionThreshold = 0.35;
+  // Responsive 25% threshold so the driver never has to slide multiple times
+  static const double _completionThreshold = 0.25;
 
   @override
   void initState() {
     super.initState();
     _springController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 220),
+      duration: const Duration(milliseconds: 200),
     );
 
     _shimmerController = AnimationController(
@@ -61,18 +61,18 @@ class _SlideToActionButtonState extends State<SlideToActionButton>
     super.dispose();
   }
 
-  void _onPointerDown(PointerDownEvent event) {
+  void _onDragStart(DragStartDetails details) {
     if (!widget.enabled || _isLoading) return;
     _isDragging = true;
-    _startX = event.position.dx;
+    _startX = details.globalPosition.dx;
     _startOffset = _dragOffset;
     _springController.stop();
   }
 
-  void _onPointerMove(PointerMoveEvent event, double maxDrag) {
+  void _onDragUpdate(DragUpdateDetails details, double maxDrag) {
     if (!_isDragging || !widget.enabled || _isLoading) return;
 
-    final delta = event.position.dx - _startX;
+    final delta = details.globalPosition.dx - _startX;
     final newOffset = (_startOffset + delta).clamp(0.0, maxDrag);
 
     if (newOffset != _dragOffset) {
@@ -89,7 +89,7 @@ class _SlideToActionButtonState extends State<SlideToActionButton>
     }
   }
 
-  void _onPointerUp(PointerUpEvent event, double maxDrag) {
+  void _onDragEnd(DragEndDetails details, double maxDrag) {
     if (!_isDragging) return;
     _isDragging = false;
     _hasHapticTriggered = false;
@@ -97,16 +97,16 @@ class _SlideToActionButtonState extends State<SlideToActionButton>
     if (!widget.enabled || _isLoading) return;
 
     final progress = maxDrag > 0 ? _dragOffset / maxDrag : 0.0;
-
-    // Effortless trigger once slid at least 35% of the track
-    if (progress >= _completionThreshold) {
+    // Trigger if crossed 25% threshold OR if quick velocity swipe to the right
+    final velocityX = details.primaryVelocity ?? 0.0;
+    if (progress >= _completionThreshold || velocityX > 250) {
       _completeSlide(maxDrag);
     } else {
       _snapBack();
     }
   }
 
-  void _onPointerCancel(PointerCancelEvent event) {
+  void _onDragCancel() {
     if (!_isDragging) return;
     _isDragging = false;
     _hasHapticTriggered = false;
@@ -114,6 +114,7 @@ class _SlideToActionButtonState extends State<SlideToActionButton>
   }
 
   void _completeSlide(double maxDrag) {
+    if (_isLoading) return;
     HapticFeedback.heavyImpact();
 
     _springAnimation = Tween<double>(
@@ -174,12 +175,17 @@ class _SlideToActionButtonState extends State<SlideToActionButton>
         final progress = maxDrag > 0 ? (_dragOffset / maxDrag).clamp(0.0, 1.0) : 0.0;
         final textOpacity = (1.0 - (progress * 1.6)).clamp(0.0, 1.0);
 
-        return Listener(
+        return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onPointerDown: _onPointerDown,
-          onPointerMove: (e) => _onPointerMove(e, maxDrag),
-          onPointerUp: (e) => _onPointerUp(e, maxDrag),
-          onPointerCancel: _onPointerCancel,
+          onHorizontalDragStart: _onDragStart,
+          onHorizontalDragUpdate: (d) => _onDragUpdate(d, maxDrag),
+          onHorizontalDragEnd: (d) => _onDragEnd(d, maxDrag),
+          onHorizontalDragCancel: _onDragCancel,
+          onTap: () {
+            if (widget.enabled && !_isLoading) {
+              _completeSlide(maxDrag);
+            }
+          },
           child: Container(
             height: widget.height,
             width: double.infinity,

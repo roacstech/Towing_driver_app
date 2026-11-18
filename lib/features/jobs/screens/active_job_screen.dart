@@ -5,8 +5,10 @@ import 'package:latlong2/latlong.dart';
 import '../../../core/constants/driver_colors.dart';
 import '../models/tow_job.dart';
 import '../services/driver_job_service.dart';
+import '../services/vehicle_inspection_service.dart';
 import '../widgets/customer_cancelled_dialog.dart';
 import '../widgets/slide_to_action_button.dart';
+import '../widgets/vehicle_inspection_card.dart';
 
 class ActiveJobScreen extends StatefulWidget {
   final TowJob job;
@@ -24,12 +26,23 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   JobStatus? _lastFittedStatus;
   bool _isCancelling = false;
   bool _isCompleting = false;
+  bool _isInspectionCompleted = false;
 
   @override
   void initState() {
     super.initState();
     DriverJobService().activeJobNotifier.addListener(_onActiveJobChanged);
     DriverJobService().customerCancelledJobNotifier.addListener(_onCustomerCancelledJob);
+    _checkInitialInspection();
+  }
+
+  Future<void> _checkInitialInspection() async {
+    final complete = await VehicleInspectionService().isInspectionComplete(widget.job.id);
+    if (mounted) {
+      setState(() {
+        _isInspectionCompleted = complete;
+      });
+    }
   }
 
   @override
@@ -1080,6 +1093,18 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                         ),
                         const SizedBox(height: 14),
 
+                        // Pre-Tow 4-Side Mandatory Inspection Card (Requires Front, Rear, Left, Right photos uploaded to S3)
+                        if (job.status == JobStatus.arrived) ...[
+                          VehicleInspectionCard(
+                            jobId: job.id,
+                            onInspectionStatusChanged: (isDone) {
+                              setState(() {
+                                _isInspectionCompleted = isDone;
+                              });
+                            },
+                          ),
+                        ],
+
                         // Main Step Progression Action Button / Completed State
                         if (_isCompleting || job.status == JobStatus.completed)
                           Container(
@@ -1108,11 +1133,28 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                           )
                         else ...[
                           SlideToActionButton(
-                            key: ValueKey(job.status),
-                            label: _getActionButtonText(job.status),
-                            baseColor: _getActionColorForStatus(job.status),
-                            icon: Icons.arrow_forward_rounded,
+                            key: ValueKey('${job.status}_$_isInspectionCompleted'),
+                            label: (job.status == JobStatus.arrived && !_isInspectionCompleted)
+                                ? 'Photograph 4 Sides to Unlock'
+                                : _getActionButtonText(job.status),
+                            baseColor: (job.status == JobStatus.arrived && !_isInspectionCompleted)
+                                ? const Color(0xFF94A3B8)
+                                : _getActionColorForStatus(job.status),
+                            enabled: (job.status != JobStatus.arrived || _isInspectionCompleted),
+                            icon: (job.status == JobStatus.arrived && !_isInspectionCompleted)
+                                ? Icons.lock_outline_rounded
+                                : Icons.arrow_forward_rounded,
                             onSlideComplete: () async {
+                              if (job.status == JobStatus.arrived && !_isInspectionCompleted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('⚠️ Pre-tow inspection incomplete: Please photograph all 4 sides (Front, Rear, Left, Right) before confirming vehicle hooked.'),
+                                    backgroundColor: DriverColors.alertRed,
+                                  ),
+                                );
+                                return;
+                              }
+
                               final previousStatus = job.status;
                               if (previousStatus == JobStatus.towing) {
                                 _isCompleting = true;
@@ -1269,6 +1311,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
+                  DriverJobService().clearActiveJob();
                   Navigator.of(ctx).pop(); // dismiss dialog
                   Navigator.of(context).popUntil((route) => route.isFirst); // back to driver home
                 },

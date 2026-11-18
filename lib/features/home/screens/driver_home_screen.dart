@@ -711,6 +711,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     builder: (context, selectedJob, _) {
                       final hasActiveJob = isOnline &&
                           activeJob != null &&
+                          !_jobService.isJobCompleted(activeJob.id) &&
                           activeJob.status != JobStatus.completed &&
                           activeJob.status != JobStatus.cancelled;
 
@@ -984,7 +985,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   Widget _buildActiveJobCard(TowJob job) {
-    if (job.status == JobStatus.completed || job.status == JobStatus.cancelled) {
+    if (_jobService.isJobCompleted(job.id) || job.status == JobStatus.completed || job.status == JobStatus.cancelled) {
       return const SizedBox.shrink();
     }
     return Container(

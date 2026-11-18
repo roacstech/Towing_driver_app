@@ -5,6 +5,7 @@ class ApiConfig {
   static String get profileEndpoint => '$baseUrl/api/profile';
   static String get usersEndpoint => '$baseUrl/api/users';
   static String get vehiclesEndpoint => '$baseUrl/api/vehicles';
+  static String get vehicleUploadEndpoint => '$baseUrl/api/vehicles/upload-image';
   static String get towsEndpoint => '$baseUrl/api/tows';
   static String get healthEndpoint => '$baseUrl/health';
 }
