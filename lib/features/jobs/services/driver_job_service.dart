@@ -227,6 +227,13 @@ class DriverJobService {
       final lat = driverLocationNotifier.value.latitude;
       final lng = driverLocationNotifier.value.longitude;
 
+      // Broadcast periodic standby heartbeat (every 12s) to keep driver online and GPS live on Admin map
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      if (nowMs - _lastHeartbeatMs > 12000) {
+        _lastHeartbeatMs = nowMs;
+        _sendDriverHeartbeat(lat, lng, isOnline: true);
+      }
+
       final List<dynamic> rawJobsList = [];
 
       // 1. Primary driver dispatch query with driver credentials
@@ -591,13 +598,14 @@ class DriverJobService {
 
     // Notify backend that driver accepted the job, sending driver live details & GPS
     final safeJobId = Uri.encodeComponent(job.id.trim());
+    final cleanDriverId = driver.id.startsWith('DRV-') ? driver.id : 'DRV-${driver.id}';
     try {
       final uri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/accept');
       final res = await http.put(
         uri,
         headers: {'content-type': 'application/json'},
         body: jsonEncode({
-          'driver_id': 'DRV-${driver.id}',
+          'driver_id': cleanDriverId,
           'driver_name': driver.name,
           'driver_phone': driver.phone,
           'driver_rating': driver.rating,
@@ -617,7 +625,7 @@ class DriverJobService {
           headers: {'content-type': 'application/json'},
           body: jsonEncode({
             'status': 'active',
-            'driver_id': 'DRV-${driver.id}',
+            'driver_id': cleanDriverId,
             'driver_name': driver.name,
             'driver_phone': driver.phone,
             'driver_rating': driver.rating,
@@ -753,20 +761,27 @@ class DriverJobService {
         );
       }
 
-      // 2. SECOND: Push driver's live GPS location to backend without overriding status
+      // 2. SECOND: Broadcast live GPS coordinates to backend for Customer & Admin live tracking
       try {
-        final statusUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/status');
+        final locUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/driver-location');
         await http.put(
-          statusUri,
+          locUri,
           headers: {'content-type': 'application/json'},
           body: jsonEncode({
-            'status': towData?['status']?.toString() ?? current.status.name,
             'driver_lat': currentPos.latitude,
             'driver_lng': currentPos.longitude,
             'driver_heading': driverHeading,
+            'status': towData?['status']?.toString() ?? current.status.name,
           }),
         ).timeout(const Duration(seconds: 3));
       } catch (_) {}
+
+      // Keep standby driver record in sync on profile
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      if (nowMs - _lastHeartbeatMs > 6000) {
+        _lastHeartbeatMs = nowMs;
+        _sendDriverHeartbeat(currentPos.latitude, currentPos.longitude, isOnline: true);
+      }
     });
   }
 
@@ -867,6 +882,20 @@ class DriverJobService {
           uri,
           headers: {'content-type': 'application/json'},
           body: jsonEncode({'status': nextStatus.name}),
+        ).timeout(const Duration(seconds: 4));
+      } catch (_) {}
+
+      try {
+        final locUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/driver-location');
+        await http.put(
+          locUri,
+          headers: {'content-type': 'application/json'},
+          body: jsonEncode({
+            'status': nextStatus.name,
+            'driver_lat': updated.driverLat,
+            'driver_lng': updated.driverLng,
+            'driver_heading': driverHeading,
+          }),
         ).timeout(const Duration(seconds: 4));
       } catch (_) {}
     }
