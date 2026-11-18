@@ -340,7 +340,7 @@ class _DriverMapState extends State<DriverMap> {
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.person_pin_circle_rounded, size: 11, color: Colors.white),
+                                  Icon(Icons.local_shipping_rounded, size: 11, color: Colors.white),
                                   SizedBox(width: 4),
                                   Text(
                                     'Pickup',
@@ -356,22 +356,25 @@ class _DriverMapState extends State<DriverMap> {
                             ),
                             const SizedBox(height: 2),
                             Container(
-                              width: 24,
-                              height: 24,
+                              width: 32,
+                              height: 32,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF2563EB),
+                                color: const Color(0xFF0F172A),
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 3),
+                                border: Border.all(color: Colors.white, width: 2),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.2),
+                                    color: Colors.black.withValues(alpha: 0.25),
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
-                              child: const Center(
-                                child: Icon(Icons.circle, color: Colors.white, size: 6),
+                              child: ClipOval(
+                                child: Image.asset(
+                                  'assets/images/tow_truck_realistic_3d.png',
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                           ],

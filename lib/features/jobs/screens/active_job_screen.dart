@@ -264,37 +264,33 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                                   alignment: Alignment.center,
                                   children: [
                                     Container(
-                                      width: 38,
-                                      height: 38,
+                                      width: 42,
+                                      height: 42,
                                       decoration: BoxDecoration(
                                         color: DriverColors.electricBlue.withValues(alpha: 0.22),
                                         shape: BoxShape.circle,
                                       ),
                                     ),
                                     Container(
-                                      width: 24,
-                                      height: 24,
+                                      width: 32,
+                                      height: 32,
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
+                                        color: const Color(0xFF0F172A),
                                         shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.white, width: 2),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: DriverColors.electricBlue.withValues(alpha: 0.35),
+                                            color: DriverColors.electricBlue.withValues(alpha: 0.4),
                                             blurRadius: 6,
                                             offset: const Offset(0, 2),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    Container(
-                                      width: 16,
-                                      height: 16,
-                                      decoration: const BoxDecoration(
-                                        color: DriverColors.electricBlue,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Center(
-                                        child: Icon(Icons.navigation_rounded, color: Colors.white, size: 10),
+                                      child: ClipOval(
+                                        child: Image.asset(
+                                          'assets/images/tow_truck_realistic_3d.png',
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -307,7 +303,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                           Marker(
                             point: pickupPos,
                             width: 140,
-                            height: 72,
+                            height: 76,
                             alignment: Alignment.center,
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -323,7 +319,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
-                                        isArrivedOrTowing ? Icons.check_circle_rounded : Icons.person_pin_circle_rounded,
+                                        isArrivedOrTowing ? Icons.check_circle_rounded : Icons.local_shipping_rounded,
                                         size: 11,
                                         color: Colors.white,
                                       ),
@@ -342,15 +338,26 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Container(
-                                  width: 30,
-                                  height: 30,
+                                  width: 36,
+                                  height: 36,
                                   decoration: BoxDecoration(
-                                    color: DriverColors.electricBlue,
+                                    color: const Color(0xFF0F172A),
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2.5),
-                                    boxShadow: DriverColors.cardShadow,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: DriverColors.electricBlue.withValues(alpha: 0.45),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                  child: const Icon(Icons.person_pin_circle_rounded, color: Colors.white, size: 17),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      'assets/images/tow_truck_realistic_3d.png',
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -503,13 +510,25 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                               child: Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(6),
+                                    width: 30,
+                                    height: 30,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFEFF6FF),
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                                      border: Border.all(color: const Color(0xFFBFDBFE), width: 1.5),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: DriverColors.electricBlue.withValues(alpha: 0.2),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
                                     ),
-                                    child: const Icon(Icons.person_pin_circle_rounded, color: DriverColors.electricBlue, size: 16),
+                                    child: ClipOval(
+                                      child: Image.asset(
+                                        'assets/images/tow_truck_realistic_3d.png',
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
@@ -673,15 +692,24 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor: DriverColors.blueTint,
-                              child: Text(
-                                job.customerName.isNotEmpty ? job.customerName[0] : 'C',
-                                style: const TextStyle(
-                                  color: DriverColors.electricBlue,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: DriverColors.electricBlue, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: DriverColors.electricBlue.withValues(alpha: 0.25),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: Image.asset(
+                                  'assets/images/tow_truck_realistic_3d.png',
+                                  fit: BoxFit.cover,
                                 ),
                               ),
                             ),
@@ -827,12 +855,25 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(5),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFEFF6FF),
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
                                       shape: BoxShape.circle,
+                                      border: Border.all(color: DriverColors.electricBlue.withValues(alpha: 0.35), width: 1.5),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.08),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
                                     ),
-                                    child: const Icon(Icons.person_pin_circle_rounded, color: DriverColors.electricBlue, size: 16),
+                                    child: ClipOval(
+                                      child: Image.asset(
+                                        'assets/images/tow_truck_realistic_3d.png',
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
