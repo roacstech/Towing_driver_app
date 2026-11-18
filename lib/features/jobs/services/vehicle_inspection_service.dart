@@ -44,6 +44,38 @@ class VehicleInspectionService {
         photos[side] = url;
       }
     }
+
+    // If local storage is empty, attempt to restore from Cloud Backend Postgres
+    if (photos.isEmpty) {
+      try {
+        final uri = Uri.parse('${ApiConfig.vehiclesEndpoint}?firebase_uid=INSP_$cleanId');
+        final res = await http.get(uri).timeout(const Duration(seconds: 3));
+        if (res.statusCode == 200) {
+          final body = jsonDecode(res.body);
+          final list = body['data'] as List?;
+          if (list != null && list.isNotEmpty) {
+            final v = list.first as Map<String, dynamic>;
+            if (v['photo_url'] != null && (v['photo_url'] as String).isNotEmpty) {
+              photos['front'] = v['photo_url'];
+              await prefs.setString('inspection_${cleanId}_front', v['photo_url']);
+            }
+            if (v['plate_image_url'] != null && (v['plate_image_url'] as String).isNotEmpty) {
+              photos['back'] = v['plate_image_url'];
+              await prefs.setString('inspection_${cleanId}_back', v['plate_image_url']);
+            }
+            if (v['asset_path'] != null && (v['asset_path'] as String).isNotEmpty) {
+              photos['left'] = v['asset_path'];
+              await prefs.setString('inspection_${cleanId}_left', v['asset_path']);
+            }
+            if (v['nickname'] != null && (v['nickname'] as String).isNotEmpty) {
+              photos['right'] = v['nickname'];
+              await prefs.setString('inspection_${cleanId}_right', v['nickname']);
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     return photos;
   }
 
@@ -125,6 +157,32 @@ class VehicleInspectionService {
       final cleanId = jobId.replaceAll('#', '').trim();
       final photos = await getPhotosForJob(jobId);
 
+      // 1. Primary: Persist to Cloud Backend Postgres vehicles table
+      try {
+        final vehicleUri = Uri.parse(ApiConfig.vehiclesEndpoint);
+        await http
+            .post(
+              vehicleUri,
+              headers: {'content-type': 'application/json'},
+              body: jsonEncode({
+                'firebase_uid': 'INSP_$cleanId',
+                'make': 'Pre-Tow Inspection',
+                'model': cleanId,
+                'year': 2026,
+                'license_plate': cleanId,
+                'photo_url': photos['front'] ?? '',
+                'plate_image_url': photos['back'] ?? photos['rear'] ?? '',
+                'asset_path': photos['left'] ?? '',
+                'nickname': photos['right'] ?? '',
+              }),
+            )
+            .timeout(const Duration(seconds: 5));
+        debugPrint('✅ [Inspection] Successfully synced photos to Cloud Postgres for $cleanId');
+      } catch (e) {
+        debugPrint('⚠️ [Inspection] Cloud vehicles sync error: $e');
+      }
+
+      // 2. Secondary: Sync directly to Admin portal if reachable (LAN, Emulator, or Localhost)
       final payload = {
         'job_id': cleanId,
         'inspection_photos': photos,
@@ -132,10 +190,10 @@ class VehicleInspectionService {
         'is_complete': requiredSides.every((s) => photos.containsKey(s)),
       };
 
-      // Try syncing to Admin portal API routes
       final adminUrls = [
+        'http://192.168.1.35:3000/api/tows/$cleanId/inspection-photos',
+        'http://10.0.2.2:3000/api/tows/$cleanId/inspection-photos',
         'http://localhost:3000/api/tows/$cleanId/inspection-photos',
-        'https://towing-admin.3t5o2t.easypanel.host/api/tows/$cleanId/inspection-photos',
       ];
 
       for (final url in adminUrls) {
@@ -146,24 +204,9 @@ class VehicleInspectionService {
                 headers: {'content-type': 'application/json'},
                 body: jsonEncode(payload),
               )
-              .timeout(const Duration(seconds: 3));
+              .timeout(const Duration(seconds: 2));
         } catch (_) {}
       }
-
-      // Also forward to backend tows status
-      try {
-        final safeJobId = Uri.encodeComponent(cleanId);
-        final backendUri = Uri.parse('${ApiConfig.towsEndpoint}/$safeJobId/status');
-        await http
-            .put(
-              backendUri,
-              headers: {'content-type': 'application/json'},
-              body: jsonEncode({
-                'inspection_photos': photos,
-              }),
-            )
-            .timeout(const Duration(seconds: 4));
-      } catch (_) {}
     } catch (_) {}
   }
 }
